@@ -1,5 +1,5 @@
 // define motors to control
-int motors_to_control = 4;
+int motors_to_control = 3;
 
 // Pin assignments for each motor
 int motor1DirPin = 2;
@@ -8,16 +8,17 @@ int motor2DirPin = 4;
 int motor2StepPin = 5;
 int motor3DirPin = 6;
 int motor3StepPin = 7;
-int motor4DirPin = 8;
-int motor4StepPin = 9;
+// int motor4DirPin = 8;
+// int motor4StepPin = 9;
 
 int endstop1Pin = 10;
 int endstop2Pin = 10; // 11;
 int endstop3Pin = 10; // 12;
-int endstop4Pin = 10; // 13;
+// int endstop4Pin = 10; // 13;
 
-int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
-int targetPositions[4] = {0, 0, 0, 0}; // Target positions
+int motorPositions[3] = {0, 0, 0};  // Current motor positions (steps)
+int homingStates[3] = {0, 0, 1};  // Current homing states (0 = not homed; 1 = homed)
+int targetPositions[4] = {0, 0, 0}; // Target positions
 int stepsPerRevolution = 200;  // Steps per revolution for the motor
 int motorMaxPosition = 10000;   // Max position in steps
 
@@ -33,8 +34,8 @@ void setup() {
   pinMode(motor2StepPin, OUTPUT);
   pinMode(motor3DirPin, OUTPUT);
   pinMode(motor3StepPin, OUTPUT);
-  pinMode(motor4DirPin, OUTPUT);
-  pinMode(motor4StepPin, OUTPUT);
+  // pinMode(motor4DirPin, OUTPUT);
+  // pinMode(motor4StepPin, OUTPUT);
 
   // Set board LED pin as output
   pinMode(LED_BUILTIN, OUTPUT);
@@ -42,8 +43,8 @@ void setup() {
   // Set endstop pins as input with pullup resistors
   pinMode(endstop1Pin, INPUT_PULLUP);
   pinMode(endstop2Pin, INPUT_PULLUP);
-  pinMode(endstop3Pin, INPUT_PULLUP);
-  pinMode(endstop4Pin, INPUT_PULLUP);
+  // pinMode(endstop3Pin, INPUT_PULLUP);
+  // pinMode(endstop4Pin, INPUT_PULLUP);
   
   Serial.begin(115200);  // Start serial communication
 }
@@ -86,7 +87,10 @@ void homeMotors() {
       stepMotor(i);
     }
     motorPositions[i] = 0;  // Reset position to 0 (home)
+    homingStates[i] =  1;  // Reset position to 0 (home)
   }
+  // Send new homing states to Processing
+  sendHomingStates();
 }
 
 // Move motor to the target position
@@ -119,11 +123,26 @@ void stepMotor(int motorIndex) {
 
 // Send motor positions to Processing
 void sendMotorPositions() {
+  Serial.print(0);
+  Serial.print(',');
   Serial.print(motorPositions[0]);
   Serial.print(',');
   Serial.print(motorPositions[1]);
   Serial.print(',');
-  Serial.print(motorPositions[2]);
+  // Serial.print(motorPositions[2]);
+  // Serial.print(',');
+  Serial.println(motorPositions[2]);
+}
+
+// Send homing states to Processing
+void sendHomingStates() {
+  Serial.print(1);
   Serial.print(',');
-  Serial.println(motorPositions[3]);
+  Serial.print(homingStates[0]);
+  Serial.print(',');
+  Serial.print(homingStates[1]);
+  Serial.print(',');
+  // Serial.print(homingStates[2]);
+  // Serial.print(',');
+  Serial.println(homingStates[2]);
 }
