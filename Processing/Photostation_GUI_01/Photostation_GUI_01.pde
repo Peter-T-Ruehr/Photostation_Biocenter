@@ -1,14 +1,14 @@
 import controlP5.*;
-// PShape backgroundSVG; // To store the SVG background
+// PShape backgrounds_armVG; // To store the SVG background
 import processing.serial.*;
 
 ControlP5 cp5;
-PImage[] backgrounds = new PImage[2];
+PImage[] backgrounds_arm = new PImage[91];
 Serial arduinoPort;
 int[] motorPositions = {0, 0, 0, 0};  // Current positions of the motors
 int[] homingStates = {0, 0, 1};  // Current Homing states of the motors
 int[] targetPositions = {0, 0, 0}; // Slider values (target positions)
-int motorMaxPosition = 200;
+int motorMaxPosition = 90;
 
 
 int motors_to_control = 3;
@@ -18,8 +18,8 @@ float stepAngle = 1.8; // Step angle in degrees
 float gearRatio = 1;    // Approximate gear reduction ratio
 float stepsPerRevolution = 360 / (stepAngle * gearRatio);
   
-int backgroundIndex = 0;
-int previousBackgroundIndex = -1;
+int backgroundIndex_arm = 0;
+int previousbackgroundIndex_arm = -1;
 int previousmotorPosition = -1;
 String previousposData = "-1";
 
@@ -28,14 +28,15 @@ void setup() {
   //println(motorPositions[0]);
   //println(motorMaxPosition);
 
-  size(800, 600); // Match the SVG's dimensions for best alignment
+  size(1000, 1000); // Match the SVG's dimensions for best alignment
   
   //// Load the background SVG file
-  //backgroundSVG = loadShape("station_CAD.svg");
+  //backgrounds_armVG = loadShape("station_CAD.svg");
   // Load background images
-  for (int i = 0; i < backgrounds.length; i++) {
+  for (int i = 0; i < backgrounds_arm.length; i++) {
     int j = i+1;
-    backgrounds[i] = loadImage("station_CAD_" + j + ".png");
+    // backgrounds_arm[i] = loadImage("station_CAD_" + j + ".png");
+    backgrounds_arm[i] = loadImage("./02_angles_arm/" + nf(j, 4) + ".png");
   }
   
   // Set up serial communication with Arduino (adjust COM port as needed)
@@ -66,10 +67,10 @@ void draw() {
   background(255);
   
   //// Draw the SVG file as the background
-  //shape(backgroundSVG, 0, 0, width, height);
+  //shape(backgrounds_armVG, 0, 0, width, height);
   
-  
-  image(backgrounds[backgroundIndex], 0, 0, 800, 600); // width, height
+  // println(backgrounds_arm[backgroundIndex_arm]);
+  image(backgrounds_arm[backgroundIndex_arm], 800/2, 600/3, 800/2, 800/2); // width, height
   
   // GUI components are automatically drawn on top by ControlP5
   // Display current motor positions
@@ -119,23 +120,24 @@ void serialEvent(Serial myPort) {
       for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
         motorPositions[i] = int(positions[i]);
         
-        // Select a background based on motor positions
-        float bg_ratio = (float) motorPositions[1] / motorMaxPosition; // Floating-Point Division
-        if(bg_ratio < 0.5){
-          backgroundIndex = 0;
-        } else{
-          backgroundIndex = 1;
-        }
-        // If the background index changed, print it
-        if (backgroundIndex != previousBackgroundIndex) {
-          println("Background index changed to: " + backgroundIndex);
-          previousBackgroundIndex = backgroundIndex; // Update the tracking variable
-        }
-        if (motorPositions[0] != previousmotorPosition) {
-          println("Motor position changed to: " + motorPositions[0]);
-          previousBackgroundIndex = backgroundIndex; // Update the tracking variable
-          previousmotorPosition = motorPositions[0];
-        }
+        backgroundIndex_arm = round(motorPositions[1]); 
+        //// Select a background based on motor positions
+        //float bg_ratio = (float) motorPositions[1] / motorMaxPosition; // Floating-Point Division
+        //if(bg_ratio < 0.5){
+        //  backgroundIndex_arm = 0;
+        //} else{
+        //  backgroundIndex_arm = 1;
+        //}
+        //// If the background index changed, print it
+        //if (backgroundIndex_arm != previousbackgroundIndex_arm) {
+        //  println("Background index arm changed to: " + backgroundIndex_arm);
+        //  previousbackgroundIndex_arm = backgroundIndex_arm; // Update the tracking variable
+        //}
+        //if (motorPositions[0] != previousmotorPosition) {
+        //  println("Motor position changed to: " + motorPositions[0]);
+        //  previousbackgroundIndex_arm = backgroundIndex_arm; // Update the tracking variable
+        //  previousmotorPosition = motorPositions[0];
+        //}
       }
     } else if (posData.startsWith("1")) {
       String[] positions = split(trim(posData), ',');
