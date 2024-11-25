@@ -7,7 +7,7 @@ int[] motorPositions = {0, 0, 0, 0};  // Current positions of the motors
 int[] targetPositions = {0, 0, 0, 0}; // Slider values (target positions)
 int motorMaxPosition = 10000;
 
-int motors_to_control = 3;
+int motors_to_control = 4;
 
 void setup() {
   size(600, 400);
@@ -64,7 +64,7 @@ void sendTargetPositions() {
   arduinoPort.write('s');  // Signal start of positions
   for (int i = 0; i < motors_to_control; i++) {
     arduinoPort.write(str(targetPositions[i]) + ',');  // Send each position
-    // print(str(targetPositions[i]) + ',');
+    print(str(targetPositions[i]) + ',');
   }
   arduinoPort.write('\n');  // End of transmission
 }
