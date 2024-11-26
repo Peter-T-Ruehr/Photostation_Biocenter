@@ -2,15 +2,15 @@ import controlP5.*;
 import processing.serial.*;
 
 ControlP5 cp5;
-PImage backgroundImage; // Variable for the background Image_arm
-float rotationAngle = 0; // Variable to control rotation
-//PImage[] image_specimen_rot = new PImage[1];
+PImage image_specimen_rot; // Variable for the background Image image_specimen_rot
+PImage ImageArm; // Variable for the Image arm
 //PImage[] image_specimen_height = new PImage[1];
 //PImage[] image_cam = new PImage[1];
 PFont calibriFont;
 
 Serial arduinoPort;
 int[] motorPositions = {0, 0, 0, 0};  // Current positions of the motors
+float[] motorDegrees =  {0, 0, 0, 0};  // Current degree positions of the motors
 int[] homingStates = {1, 0, 0, 0};  // Current Homing states of the motors
 int[] targetPositions = {0, 0, 0, 0}; // Slider values (target positions)
 int[] MaxmotorPositions = {0, 360, 90, 360, 360};
@@ -42,8 +42,8 @@ void setup() {
   cp5.setFont(calibriFont); // Apply font globally to all buttons
   
    // Load the background image
-  backgroundImage = loadImage("03_angles_arm.png"); // Replace with your PNG file
-  //if (backgroundImage == null) {
+  ImageArm = loadImage("03_angles_arm.png"); // Replace with your PNG file
+  //if (ImageArm == null) {
   //  println("Error: Could not load the image. Ensure '03_angles_arm.png' is in the sketch folder.");
   //  exit();
   //}
@@ -99,7 +99,7 @@ void setup() {
   // negative
   String[] armButtons_negative = {
     // "Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
-    //"Move Arm to 67.5°", "Move Arm to 90°"
+    //"Move Arm to 67.5°", "Move Arm to 90
     "-1°", "-5°", "-10°", "-45°", "-90°"
   };
   y = addRow("ArmControlsNeg", armButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
@@ -162,11 +162,28 @@ void setup() {
 void draw() {
   background(240); // Set a light background
   
+  // Draw the rotating image at a fixed position
+  pushMatrix(); // Save the current transformation
+  translate(500 + 200 / 2, 160 + 200 / 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  //println(motorDegrees[2]);
+  rotate(degreesToRadians(motorDegrees[2])); // Rotate around the image's center degreesToRadians(motorPositions[2]/current_microstepping)
+  imageMode(CENTER); // Draw the image from its center
+  image(ImageArm, 0, 0, 200, 200); // width, height
+  popMatrix(); // Restore the original transformation
+  
+  //// Draw the rotating image at a fixed position
+  //pushMatrix(); // Save the current transformation
+  //translate(400 + 400 / 2, 200 + 400/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  //rotate(-1*degreesToRadians(motorPositions[2])); // Rotate around the image's center
+  //imageMode(CENTER); // Draw the image from its center
+  //image(backgrounds_arm[backgroundIndex_arm], 0, 0, 400, 400); // width, height
+  //popMatrix(); // Restore the original transformation
+  
   String row_labels[] = {"Rotate Specimen Right", "Rotate Specimen Left", 
     "",
     "Raise Specimen by", "Lower Specimen by",
     "",
-    "Tilt Arm Down by", "Tilt Arm Up by",
+    "Tilt Arm Up by", "Tilt Arm Down by",
     "",
     "Increase Camera Distance by", "Decrease Camera Distance by",
     "",
@@ -185,19 +202,8 @@ void draw() {
   }
 }
 
-// Function to draw the rotating image
-void drawRotatingImage() {
-  float imageX = 500 + marginX; // Position to the right of the GUI
-  float imageY = height / 2; // Center vertically
-
-  pushMatrix();
-  translate(imageX + backgroundImage.width / 2, imageY); // Move to image center
-  rotate(radians(rotationAngle)); // Apply rotation
-  imageMode(CENTER);
-  image(backgroundImage, 0, 0); // Draw the image
-  popMatrix();
-
-  rotationAngle += 0.5; // Update rotation angle for animation (change as needed)
+float degreesToRadians(float degrees) {
+  return degrees * PI / 180; // Multiply degrees by π/180 to get radians
 }
 
 // Function to disable buttons
@@ -242,124 +248,127 @@ void controlEvent(ControlEvent theEvent) {
     String name = theEvent.getController().getName();
     println("Button " + name + " clicked!");
     if (theEvent.getController().getName().equals("RotControlsSpecimensPos_0")) {
-      arduinoPort.write("REL 0 1\n");  // Send homing command
+      arduinoPort.write("REL 0 1\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_1")) {
-      arduinoPort.write("REL 0 5\n");  // Send homing command
+      arduinoPort.write("REL 0 5\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_2")) {
-      arduinoPort.write("REL 0 45\n");  // Send homing command
+      arduinoPort.write("REL 0 45\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_3")) {
-      arduinoPort.write("REL 0 90\n");  // Send homing command
+      arduinoPort.write("REL 0 90\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_4")) {
-      arduinoPort.write("REL 0 180\n");  // Send homing command
+      arduinoPort.write("REL 0 180\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_5")) {
-      arduinoPort.write("REL 0 360\n");  // Send homing command
+      arduinoPort.write("REL 0 360\n");
     } 
     else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_0")) {
-      arduinoPort.write("REL 0 -1\n");  // Send homing command
+      arduinoPort.write("REL 0 -1\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_1")) {
-      arduinoPort.write("REL 0 -5\n");  // Send homing command
+      arduinoPort.write("REL 0 -5\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_2")) {
-      arduinoPort.write("REL 0 -45\n");  // Send homing command
+      arduinoPort.write("REL 0 -45\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_3")) {
-      arduinoPort.write("REL 0 -90\n");  // Send homing command
+      arduinoPort.write("REL 0 -90\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_4")) {
-      arduinoPort.write("REL 0 -180\n");  // Send homing command
+      arduinoPort.write("REL 0 -180\n");
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_5")) {
-      arduinoPort.write("REL 0 -360\n");  // Send homing command
+      arduinoPort.write("REL 0 -360\n");
     }
     else if (theEvent.getController().getName().equals("SpecHeightControlsPos_0")) {
-      arduinoPort.write("REL 1 1\n");  // Send homing command
+      arduinoPort.write("REL 1 1\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_1")) {
-      arduinoPort.write("REL 1 5\n");  // Send homing command
+      arduinoPort.write("REL 1 5\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_2")) {
-      arduinoPort.write("REL 1 45\n");  // Send homing command
+      arduinoPort.write("REL 1 45\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_3")) {
-      arduinoPort.write("REL 1 90\n");  // Send homing command
+      arduinoPort.write("REL 1 90\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_4")) {
-      arduinoPort.write("REL 1 180\n");  // Send homing command
+      arduinoPort.write("REL 1 180\n");
     }
     else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_0")) {
-      arduinoPort.write("REL 1 -1\n");  // Send homing command
+      arduinoPort.write("REL 1 -1\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_1")) {
-      arduinoPort.write("REL 1 -5\n");  // Send homing command
+      arduinoPort.write("REL 1 -5\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_2")) {
-      arduinoPort.write("REL 1 -45\n");  // Send homing command
+      arduinoPort.write("REL 1 -45\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_3")) {
-      arduinoPort.write("REL 1 -90\n");  // Send homing command
+      arduinoPort.write("REL 1 -90\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_4")) {
-      arduinoPort.write("REL 1 -180\n");  // Send homing command
+      arduinoPort.write("REL 1 -180\n");
     }
     else if (theEvent.getController().getName().equals("ArmControlsPos_0")) {
-      arduinoPort.write("REL 2 1\n");  // Send homing command
+      arduinoPort.write("REL 2 -1\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_1")) {
-      arduinoPort.write("REL 2 5\n");  // Send homing command
+      arduinoPort.write("REL 2 -5\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_2")) {
-      arduinoPort.write("REL 2 45\n");  // Send homing command
+      arduinoPort.write("REL 2 -10\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_3")) {
-      arduinoPort.write("REL 2 90\n");  // Send homing command
+      arduinoPort.write("REL 2 -45\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_4")) {
-      arduinoPort.write("REL 2 180\n");  // Send homing command
+      arduinoPort.write("REL 2 -90\n");
     }
     else if (theEvent.getController().getName().equals("ArmControlsNeg_0")) {
-      arduinoPort.write("REL 2 -1\n");  // Send homing command
+      arduinoPort.write("REL 2 1\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_1")) {
-      arduinoPort.write("REL 2 -5\n");  // Send homing command
+      arduinoPort.write("REL 2 5\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_2")) {
-      arduinoPort.write("REL 2 -45\n");  // Send homing command
+      arduinoPort.write("REL 2 10\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_3")) {
-      arduinoPort.write("REL 2 -90\n");  // Send homing command
+      arduinoPort.write("REL 2 45\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_4")) {
-      arduinoPort.write("REL 2 -180\n");  // Send homing command
+      arduinoPort.write("REL 2 90\n");
     }
     else if (theEvent.getController().getName().equals("CamControlsPos_0")) {
-      arduinoPort.write("REL 3 1\n");  // Send homing command
+      arduinoPort.write("REL 3 1\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_1")) {
-      arduinoPort.write("REL 3 5\n");  // Send homing command
+      arduinoPort.write("REL 3 5\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_2")) {
-      arduinoPort.write("REL 3 45\n");  // Send homing command
+      arduinoPort.write("REL 3 45\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_3")) {
-      arduinoPort.write("REL 3 90\n");  // Send homing command
+      arduinoPort.write("REL 3 90\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_4")) {
-      arduinoPort.write("REL 3 180\n");  // Send homing command
+      arduinoPort.write("REL 3 180\n");
     }
     else if (theEvent.getController().getName().equals("CamControlsNeg_0")) {
-      arduinoPort.write("REL 3 -1\n");  // Send homing command
+      arduinoPort.write("REL 3 -1\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_1")) {
-      arduinoPort.write("REL 3 -5\n");  // Send homing command
+      arduinoPort.write("REL 3 -5\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_2")) {
-      arduinoPort.write("REL 3 -45\n");  // Send homing command
+      arduinoPort.write("REL 3 -45\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_3")) {
-      arduinoPort.write("REL 3 -90\n");  // Send homing command
+      arduinoPort.write("REL 3 -90\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_4")) {
-      arduinoPort.write("REL 3 -180\n");  // Send homing command
+      arduinoPort.write("REL 3 -180\n");
     } 
     // Home Specimen Height
     else if (theEvent.getController().getName().equals("HomingControls_0")) {
-      arduinoPort.write("HOME 1 0\n");  // Send homing command
+      arduinoPort.write("HOME 1 0\n");
       enableButtons(new String[]{
         "SpecHeightControlsPos_0", "SpecHeightControlsPos_1", "SpecHeightControlsPos_2", "SpecHeightControlsPos_3", "SpecHeightControlsPos_4",
         "SpecHeightControlsNeg_0", "SpecHeightControlsNeg_1", "SpecHeightControlsNeg_2", "SpecHeightControlsNeg_3", "SpecHeightControlsNeg_4"
       });
+      isSpecHeightHomed = true;
     }
     // Home Arm
     else if (theEvent.getController().getName().equals("HomingControls_1")) {
-      arduinoPort.write("HOME 2 0\n");  // Send homing command
+      arduinoPort.write("HOME 2 0\n");
       enableButtons(new String[]{
         "ArmControlsPos_0", "ArmControlsPos_1", "ArmControlsPos_2", "ArmControlsPos_3", "ArmControlsPos_4",
         "ArmControlsNeg_0", "ArmControlsNeg_1", "ArmControlsNeg_2", "ArmControlsNeg_3", "ArmControlsNeg_4"
       });
+      isArmHomed = true;
     }
     // Home Camera Offset
     else if (theEvent.getController().getName().equals("HomingControls_2")) {
-      arduinoPort.write("HOME 3 0\n");  // Send homing command
+      arduinoPort.write("HOME 3 0\n");
       enableButtons(new String[]{
         "CamControlsPos_0", "CamControlsPos_1", "CamControlsPos_2", "CamControlsPos_3", "CamControlsPos_4",
         "CamControlsNeg_0", "CamControlsNeg_1", "CamControlsNeg_2", "CamControlsNeg_3", "CamControlsNeg_4"
       });
+      isCameraHomed = true;
     }
     // Reset Specimen Rotation
     else if (theEvent.getController().getName().equals("SpecRotReset_0")) {
-      arduinoPort.write("RESET_SPEC_ROT 0 0\n");  // Send homing command
+      arduinoPort.write("RESET_SPEC_ROT 0 0\n");
     }
   }
 }
@@ -381,14 +390,24 @@ void serialEvent(Serial port) {
     println("A: " + received); // Print the received data to the console
     
     if(received.startsWith("0")){
+      println("Updating motor positions...");
       String[] positions = split(trim(received), ',');
       for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
         motorPositions[i-1] = int(positions[i]);
       }
-    } else if (received.startsWith("1")) {
+    } 
+    else if (received.startsWith("1")) {
+      println("Updating homing states...");
       String[] positions = split(trim(received), ',');
       for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
         homingStates[i-1] = int(positions[i]);
+      }
+    } 
+    else if (received.startsWith("2")) {
+      println("Updating motor degrees...");
+      String[] positions = split(trim(received), ',');
+      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
+        motorDegrees[i-1] = int(positions[i]);
       }
     }
   }
