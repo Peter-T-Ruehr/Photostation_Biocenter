@@ -2,10 +2,10 @@ import controlP5.*;
 import processing.serial.*;
 
 ControlP5 cp5;
-PImage image_specimen_rot; // Variable for the background Image image_specimen_rot
-PImage ImageArm; // Variable for the Image arm
-//PImage[] image_specimen_height = new PImage[1];
-//PImage[] image_cam = new PImage[1];
+PImage image_specimen_rot; // Variable for the Image image_specimen_rot
+PImage image_specimen_height; // Variable for the Image image_specimen_height
+PImage ImageMachine; // Variable for the Image ImageMachine
+PImage ImageArm; // Variable for the Image ImageArm
 PFont calibriFont;
 
 Serial arduinoPort;
@@ -13,7 +13,7 @@ int[] motorPositions = {0, 0, 0, 0};  // Current positions of the motors
 float[] motorDegrees =  {0, 0, 0, 0};  // Current degree positions of the motors
 int[] homingStates = {1, 0, 0, 0};  // Current Homing states of the motors
 int[] targetPositions = {0, 0, 0, 0}; // Slider values (target positions)
-int[] MaxmotorPositions = {0, 360, 90, 360, 360};
+int[] MaxmotorPositions = {360, 90, 3600, 1800};
 
 int motors_to_control = 4;
 
@@ -42,12 +42,10 @@ void setup() {
   cp5.setFont(calibriFont); // Apply font globally to all buttons
   
    // Load the background image
-  ImageArm = loadImage("03_angles_arm.png"); // Replace with your PNG file
-  //if (ImageArm == null) {
-  //  println("Error: Could not load the image. Ensure '03_angles_arm.png' is in the sketch folder.");
-  //  exit();
-  //}
-  
+  image_specimen_rot = loadImage("01_angles_specimen.png");
+  image_specimen_height = loadImage("02_specimen_height.png");
+  ImageArm = loadImage("03_arm.png");
+  ImageMachine = loadImage("00_immovable.png");
   // Add row labels and buttons for each group
   int x = 50;
   int y = 20;  // Initial vertical position for the first row
@@ -75,13 +73,13 @@ void setup() {
   y = y+buttonHeight+marginY;
   // positive
   String[] specimenHeightButtons_positive = {
-     "-0.1 mm", "-0.5 mm", "-1 mm", "-5 mm", "-10 mm", 
+     "0.1 mm", "0.5 mm", "1 mm", "5 mm", "10 mm", 
   };
   y = addRow("SpecHeightControlsPos", specimenHeightButtons_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
   // negative
   String[] specimenHeightButtons_negative = {
-     "0.1 mm", "0.5 mm", "1 mm", "5 mm", "10 mm", 
+     "-0.1 mm", "-0.5 mm", "-1 mm", "-5 mm", "-10 mm", 
   };
   y = addRow("SpecHeightControlsNeg", specimenHeightButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
@@ -160,24 +158,51 @@ void setup() {
 }
 
 void draw() {
-  background(240); // Set a light background
+  background(255); // Set a light background
   
-  // Draw the rotating image at a fixed position
+  int machine_image_x = 562;
+  int machine_image_y = 289;
+  
+  int specimen_height_image_x = 562;
+  int specimen_height_image_y = 289;
+  
+  int arm_image_x = 511;
+  int arm_image_y = 132;
+  
+  // Draw machine image at a fixed position
   pushMatrix(); // Save the current transformation
-  translate(500 + 200 / 2, 160 + 200 / 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  translate(550 + machine_image_x / 2, 160 + 100 +  machine_image_y / 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  imageMode(CENTER); // Draw the image from its center
+  image(ImageMachine, 0, 0, machine_image_x, machine_image_y); // width, height
+  popMatrix(); // Restore the original transformation
+  
+  // Draw the rotating arm image at a fixed position
+  pushMatrix(); // Save the current transformation
+  translate(550 - 18 + (machine_image_x-arm_image_x)/2 + arm_image_x / 2, 100 + 124 + arm_image_y / 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)0
   //println(motorDegrees[2]);
   rotate(degreesToRadians(motorDegrees[2])); // Rotate around the image's center degreesToRadians(motorPositions[2]/current_microstepping)
   imageMode(CENTER); // Draw the image from its center
-  image(ImageArm, 0, 0, 200, 200); // width, height
+  image(ImageArm, 0, 0, arm_image_x, arm_image_y); // width, height
   popMatrix(); // Restore the original transformation
   
-  //// Draw the rotating image at a fixed position
-  //pushMatrix(); // Save the current transformation
-  //translate(400 + 400 / 2, 200 + 400/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
-  //rotate(-1*degreesToRadians(motorPositions[2])); // Rotate around the image's center
-  //imageMode(CENTER); // Draw the image from its center
-  //image(backgrounds_arm[backgroundIndex_arm], 0, 0, 400, 400); // width, height
-  //popMatrix(); // Restore the original transformation
+  // Draw the species height translation image at a fixed position
+  pushMatrix(); // Save the current transformation
+  translate(550 + specimen_height_image_x / 2, 160 + 100 +  specimen_height_image_y / 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  //println(motorDegrees[2]);
+  translate(0, -1*motorDegrees[1]/50);
+  
+  imageMode(CENTER); // Draw the image from its center
+  image(image_specimen_height, 0, 0, specimen_height_image_x, specimen_height_image_y); // width, height
+  popMatrix(); // Restore the original transformation
+  
+  
+  // Draw the rotating image at a fixed position
+  pushMatrix(); // Save the current transformation
+  translate(25 + 550 + 150 / 2, 5 + 150/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  rotate(degreesToRadians(motorDegrees[0])); // Rotate around the image's center
+  imageMode(CENTER); // Draw the image from its center
+  image(image_specimen_rot, 0, 0, 150, 150); // width, height
+  popMatrix(); // Restore the original transformation
   
   String row_labels[] = {"Rotate Specimen Right", "Rotate Specimen Left", 
     "",
@@ -296,26 +321,26 @@ void controlEvent(ControlEvent theEvent) {
       arduinoPort.write("REL 1 -180\n");
     }
     else if (theEvent.getController().getName().equals("ArmControlsPos_0")) {
-      arduinoPort.write("REL 2 -1\n");
+      arduinoPort.write("REL 2 1\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_1")) {
-      arduinoPort.write("REL 2 -5\n");
+      arduinoPort.write("REL 2 5\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_2")) {
-      arduinoPort.write("REL 2 -10\n");
+      arduinoPort.write("REL 2 10\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_3")) {
-      arduinoPort.write("REL 2 -45\n");
+      arduinoPort.write("REL 2 45\n");
     } else if (theEvent.getController().getName().equals("ArmControlsPos_4")) {
-      arduinoPort.write("REL 2 -90\n");
+      arduinoPort.write("REL 2 90\n");
     }
     else if (theEvent.getController().getName().equals("ArmControlsNeg_0")) {
-      arduinoPort.write("REL 2 1\n");
+      arduinoPort.write("REL 2 -1\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_1")) {
-      arduinoPort.write("REL 2 5\n");
+      arduinoPort.write("REL 2 -5\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_2")) {
-      arduinoPort.write("REL 2 10\n");
+      arduinoPort.write("REL 2 -10\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_3")) {
-      arduinoPort.write("REL 2 45\n");
+      arduinoPort.write("REL 2 -45\n");
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_4")) {
-      arduinoPort.write("REL 2 90\n");
+      arduinoPort.write("REL 2 -90\n");
     }
     else if (theEvent.getController().getName().equals("CamControlsPos_0")) {
       arduinoPort.write("REL 3 1\n");

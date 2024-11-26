@@ -1,6 +1,9 @@
 // Pin assignments for each motor
 int DirPin_specimen_rot = 2;
 int StepPin_specimen_rot = 3;
+int EndstopPin_specimen_rot = 11; // connect to GND
+int StepPin_specimen_height = 9;
+int EndstopPin_specimen_height = 10;
 int DirPin_arm = 4;
 int StepPin_arm = 5;
 int EndstopPin_arm = 10;
@@ -8,15 +11,37 @@ int DirPin_cam = 6;
 int StepPin_cam = 7;
 int EndstopPin_cam = 10;
 int DirPin_specimen_height = 8;
-int StepPin_specimen_height = 9;
-int EndstopPin_specimen_height = 10;
 
-int motorIndicesDir[4] = {DirPin_specimen_rot, DirPin_arm, DirPin_cam, DirPin_specimen_height};
-int motorIndicesStep[4] = {StepPin_specimen_rot, StepPin_arm, StepPin_cam, StepPin_specimen_height};
+/*
+0 Specimen rotation
+1 Specimen height
+2 Arm
+3 Camera offset
+*/
+
+//                            0                         1                           2                 3
+int motorIndicesDir[4] =      {DirPin_specimen_rot,     DirPin_specimen_height,     DirPin_arm,       DirPin_cam};
+int motorIndicesStep[4] =     {StepPin_specimen_rot,    StepPin_specimen_height,    StepPin_arm,      StepPin_cam};
+int motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_height, EndstopPin_arm,   EndstopPin_cam};
 
 int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
 int motorMicrostepping[4] = {1, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
+
+
+// Function to convert motor steps to degrees
+float stepsToDegrees(int steps, int stepsPerRevolution) {
+  return (360.0 / stepsPerRevolution) * steps;
+}
+
+// Function to convert degrees to motor steps
+int degreesToSteps(float degrees, int stepsPerRevolution) {
+  return round((degrees / 360.0) * stepsPerRevolution);
+}
+
+// define soft endstop values
+int motorIndicesSoftendstops[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), degreesToSteps(1800,200)};
+
 // int targetPositions[4] = {0, 0, 0}; // Target positions
 float stepsPerRevolution = 200;  // Steps per revolution for the motor
 
@@ -33,15 +58,16 @@ void setup() {
   // Set step and direction pins as output
   pinMode(DirPin_specimen_rot, OUTPUT);
   pinMode(StepPin_specimen_rot, OUTPUT);
+  pinMode(EndstopPin_specimen_rot, INPUT_PULLUP); // Enable pull-up resistor
+  pinMode(DirPin_specimen_height, OUTPUT);
+  pinMode(StepPin_specimen_height, OUTPUT);
+  pinMode(EndstopPin_specimen_height, INPUT_PULLUP); // Enable pull-up resistor
   pinMode(DirPin_arm, OUTPUT);
   pinMode(StepPin_arm, OUTPUT);
   pinMode(EndstopPin_arm, INPUT_PULLUP); // Enable pull-up resistor
   pinMode(DirPin_cam, OUTPUT);
   pinMode(StepPin_cam, OUTPUT);
   pinMode(EndstopPin_cam, INPUT_PULLUP); // Enable pull-up resistor
-  pinMode(DirPin_specimen_height, OUTPUT);
-  pinMode(StepPin_specimen_height, OUTPUT);
-  pinMode(EndstopPin_specimen_height, INPUT_PULLUP); // Enable pull-up resistor
 
     // Set board LED pin as output
   pinMode(LED_BUILTIN, OUTPUT);
@@ -163,18 +189,68 @@ void moveMotor(int motorIndex, int degrees) {
     Serial.print("degrees: ");
     Serial.println(degrees);
   }
-
+  
   if(target > 0){
     digitalWrite(motorIndicesDir[motorIndex], HIGH);
-    motorPositions[motorIndex] = motorPositions[motorIndex]+target;
-  } else{
+  } else {
     digitalWrite(motorIndicesDir[motorIndex], LOW);
-    motorPositions[motorIndex] = motorPositions[motorIndex]+target;
-    target = abs(target);
   }
+  int target_abs = abs(target);
 
   int delay_steps = round(delay_base/motorMicrostepping[motorIndex]);
-  for (int i = 0; i < target; i++) {
+
+  // Serial.println(motorIndex);
+  int curr_endstop_pin = motorIndicesEndstop[motorIndex];
+  // Serial.println(curr_endstop_pin);
+  int curr_endstop_soft = motorIndicesSoftendstops[motorIndex];
+  for (int i = 0; i < target_abs; i++) {
+    // Check if endstop is reached
+    if(digitalRead(curr_endstop_pin) == LOW && 
+          motorPositions[motorIndex] < curr_endstop_soft + 1 &&
+          motorPositions[motorIndex] > 0 - 1){
+      //if(motorPositions[motorIndex] > curr_endstop_soft){
+        digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+        delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+        digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
+        delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+        if(target > 0) {
+          digitalWrite(motorIndicesDir[motorIndex], HIGH);
+          motorPositions[motorIndex] = motorPositions[motorIndex]+1;
+        } else {
+          digitalWrite(motorIndicesDir[motorIndex], LOW);
+          motorPositions[motorIndex] = motorPositions[motorIndex]-1;
+          //   
+        }
+      }
+    //}
+  }
+
+  // reverse one step in case 0 position was reached
+  if(motorPositions[motorIndex] == 0 - 1){
+    // reverse motor direction
+    if(target > 0){
+      digitalWrite(motorIndicesDir[motorIndex], LOW);
+      motorPositions[motorIndex] = motorPositions[motorIndex]-1;
+    } else {
+      digitalWrite(motorIndicesDir[motorIndex], HIGH);
+      motorPositions[motorIndex] = motorPositions[motorIndex]+1;
+    }
+    digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+    digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  }
+
+  // reverse one step in case soft endstop was reached
+  if(motorPositions[motorIndex] == curr_endstop_soft + 1){
+    // reverse motor direction
+    if(target > 0){
+      digitalWrite(motorIndicesDir[motorIndex], LOW);
+      motorPositions[motorIndex] = motorPositions[motorIndex]-1;
+    } else {
+      digitalWrite(motorIndicesDir[motorIndex], HIGH);
+      motorPositions[motorIndex] = motorPositions[motorIndex]+1;
+    }
     digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
     delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
     digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
@@ -226,15 +302,6 @@ void sendHomingStates() {
   Serial.println(homingStates[3]);
 }
 
-// Function to convert motor steps to degrees
-float stepsToDegrees(int steps, int stepsPerRevolution) {
-  return (360.0 / stepsPerRevolution) * steps;
-}
-
-// Function to convert degrees to motor steps
-int degreesToSteps(float degrees, int stepsPerRevolution) {
-  return round((degrees / 360.0) * stepsPerRevolution);
-}
 
 // // Function to print an integer array
 // int arraySize = sizeof(motorPositions) / sizeof(motorPositions[0]);  // Calculate array sizeprintArray(motorPositions, arraySize);
