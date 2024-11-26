@@ -6,22 +6,23 @@ int StepPin_arm = 5;
 int EndstopPin_arm = 10;
 int DirPin_cam = 6;
 int StepPin_cam = 7;
-int EndstopPin_cam = 11;
+int EndstopPin_cam = 10;
 
 int motorIndicesDir[3] = {DirPin_specimen, DirPin_arm, DirPin_cam};
 int motorIndicesStep[3] = {StepPin_specimen, StepPin_arm, StepPin_cam};
 
-int endstop2Pin = 10;
-int endstop3Pin = 10; // 11;
 
 int motorPositions[3] = {0, 0, 0};  // Current motor positions (steps)
-int motorMicrostepping[3] = {8, 1, 1};  // Microstepping (1/x) - deprecated but still in use
+int motorMicrostepping[3] = {1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[3] = {1, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
-int targetPositions[4] = {0, 0, 0}; // Target positions
-int stepsPerRevolution = 200;  // Steps per revolution for the motor
+// int targetPositions[4] = {0, 0, 0}; // Target positions
+float stepsPerRevolution = 200;  // Steps per revolution for the motor
 
 int delay_base = 500;
 
+const int bufferSize = 64; // Maximum size of the input buffer
+char inputBuffer[bufferSize]; // Buffer to hold the incoming data
+int bufferIndex = 0; // Index to track the buffer position
 
 
 void setup() {
@@ -35,45 +36,71 @@ void setup() {
   pinMode(StepPin_cam, OUTPUT);
   pinMode(EndstopPin_cam, INPUT_PULLUP); // Enable pull-up resistor
 
-  // Set board LED pin as output
+    // Set board LED pin as output
   pinMode(LED_BUILTIN, OUTPUT);
-
-  // Set endstop pins as input with pullup resistors
-  pinMode(endstop2Pin, INPUT_PULLUP);
-  pinMode(endstop3Pin, INPUT_PULLUP);
   
   Serial.begin(115200);  // Start serial communication
 }
 
 
 void loop() {
-  if (Serial.available()) {
-    char command = Serial.read();  // Get command from Processing
-    
-    if (command == '1') {
-      moveMotor(0,200);
-    }
-    if (command == '2') {
-      moveMotor(0,-200);
-    }
-    if (command == '3') {
-      moveMotor(1,200);
-    }
-    if (command == '4') {
-      moveMotor(1,-200);
-    }
-    if (command == '5') {
-      moveMotor(2,200);
-    }
-    if (command == '6') {
-      moveMotor(2,-200);
-    }
+ // Check if data is available on the serial port
+  while (Serial.available() > 0) {
+    char receivedChar = Serial.read(); // Read one character from the serial port
 
-    
-    if (command == '7') {
-      homeMotor(0);
+    // Check for the end of the input (e.g., newline character '\n')
+    if (receivedChar == '\n') {
+      inputBuffer[bufferIndex] = '\0'; // Null-terminate the string
+      parseAndExecuteCommand(inputBuffer); // Process the received command
+      bufferIndex = 0; // Reset buffer index for the next input
+    } else if (bufferIndex < bufferSize - 1) {
+      inputBuffer[bufferIndex++] = receivedChar; // Add character to buffer
+    } else {
+      Serial.println("Input buffer overflow!");
+      bufferIndex = 0; // Reset buffer index to prevent overflow
     }
   }
+    
+}
+
+// Function to process the received command
+void parseAndExecuteCommand(const char* command) {
+  char commandString[16]; // To store the command part
+  int number1, number2;   // To store the two numbers
+
+  // Parse the command using sscanf
+  if (sscanf(command, "%15s %d %d", commandString, &number1, &number2) == 3) {
+    executeCommand(commandString, number1, number2); // Pass parsed values to a function
+  } else {
+    Serial.println("Invalid command format. Use: COMMAND <number1> <number2>");
+  }
+}
+
+// Function to handle the parsed command and number
+void executeCommand(const char* command, int value1, int value2) {
+    // Serial.println("Executing ");
+    // Serial.println(command);
+    // Serial.println(value*59);
+    if (strcmp(command, "ABS") == 0) {
+      moveMotorTo(value1, value2);
+    } else if (strcmp(command, "REL") == 0) {
+      moveMotor(value1, value2);
+    }
+}
+
+void turnLedOn() {
+  Serial.println("Turning LED ON");
+  digitalWrite(LED_BUILTIN, HIGH);
+}
+
+void turnLedOff() {
+  Serial.println("Turning LED OFF");
+  digitalWrite(LED_BUILTIN, LOW);
+}
+
+void reportStatus() {
+  sendMotorPositions();
+  sendHomingStates();
 }
 
 void homeMotor(int motorIndex){
@@ -87,21 +114,57 @@ void homeMotor(int motorIndex){
   sendHomingStates();
 }
 
-void moveMotor(int motorIndex, int steps) {
-  // Serial.println(steps);
-  if(steps > 0){
+void moveMotorTo(int motorIndex, float degrees){
+  int curr_motor_position = motorPositions[motorIndex];
+  float curr_motor_degrees = stepsToDegrees(curr_motor_position, 200);
+
+  float curr_degrees_difference = degrees - curr_motor_degrees;
+  moveMotor(motorIndex, curr_degrees_difference);
+}
+
+void moveMotor(int motorIndex, int degrees) {
+  float target = -1;
+  if(motorIndex == 0){
+    Serial.print("degrees: ");
+    Serial.println(degrees);
+    target = degreesToSteps(degrees, 200);
+    Serial.print("target: ");
+    Serial.println(target);
+  } else if(motorIndex == 1){
+    Serial.print("degrees: ");
+    Serial.println(degrees);
+    target = degreesToSteps(degrees, 200);
+    Serial.print("target: ");
+    Serial.println(target);
+  } else if(motorIndex == 2){
+    Serial.print("degrees: ");
+    Serial.println(degrees);
+    target = degreesToSteps(degrees, 200);
+    Serial.print("target: ");
+    Serial.println(target);
+  } else if (motorIndex == 3){
+    Serial.print("degrees: ");
+    Serial.println(degrees);
+    target = degreesToSteps(degrees, 200);
+    Serial.print("target: ");
+    Serial.println(target);
+  } else {
+    Serial.print("Motor not defined.");
+  }
+  
+  if(target > 0){
     digitalWrite(motorIndicesDir[motorIndex], HIGH);
-    motorPositions[motorIndex] = motorPositions[motorIndex]+steps;
+    motorPositions[motorIndex] = motorPositions[motorIndex]+target;
   } else{
     digitalWrite(motorIndicesDir[motorIndex], LOW);
-    motorPositions[motorIndex] = motorPositions[motorIndex]+steps;
-    steps = abs(steps);
+    motorPositions[motorIndex] = motorPositions[motorIndex]+target;
+    target = abs(target);
   }
 
   sendMotorPositions();
 
   int delay_steps = round(delay_base/motorMicrostepping[motorIndex]);
-  for (int i = 0; i < steps; i++) {
+  for (int i = 0; i < target; i++) {
     digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
     delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
     digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
@@ -130,6 +193,17 @@ void sendHomingStates() {
   Serial.print(',');
   Serial.println(homingStates[2]);
 }
+
+// Function to convert motor steps to degrees
+float stepsToDegrees(int steps, int stepsPerRevolution) {
+  return (360.0 / stepsPerRevolution) * steps;
+}
+
+// Function to convert degrees to motor steps
+int degreesToSteps(float degrees, int stepsPerRevolution) {
+  return round((degrees / 360.0) * stepsPerRevolution);
+}
+
 // // Function to print an integer array
 // int arraySize = sizeof(motorPositions) / sizeof(motorPositions[0]);  // Calculate array sizeprintArray(motorPositions, arraySize);
 // void printArray(int arr[], int size) {
