@@ -180,7 +180,7 @@ void draw() {
   pushMatrix(); // Save the current transformation
   translate(550 - 18 + (machine_image_x-arm_image_x)/2 + arm_image_x / 2, 100 + 124 + arm_image_y / 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)0
   //println(motorDegrees[2]);
-  rotate(degreesToRadians(motorDegrees[2])); // Rotate around the image's center degreesToRadians(motorPositions[2]/current_microstepping)
+  rotate(-1*degreesToRadians(motorDegrees[2])); // Rotate around the image's center
   imageMode(CENTER); // Draw the image from its center
   image(ImageArm, 0, 0, arm_image_x, arm_image_y); // width, height
   popMatrix(); // Restore the original transformation

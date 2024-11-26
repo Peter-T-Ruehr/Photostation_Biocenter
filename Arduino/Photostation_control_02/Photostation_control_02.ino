@@ -25,7 +25,7 @@ int motorIndicesStep[4] =     {StepPin_specimen_rot,    StepPin_specimen_height,
 int motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_height, EndstopPin_arm,   EndstopPin_cam};
 
 int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
-int motorMicrostepping[4] = {1, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
+int motorMicrostepping[4] = {8, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
 
 
@@ -39,11 +39,21 @@ int degreesToSteps(float degrees, int stepsPerRevolution) {
   return round((degrees / 360.0) * stepsPerRevolution);
 }
 
-// define soft endstop values
-int motorIndicesSoftendstops[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), degreesToSteps(1800,200)};
+// Function to multiply two arrays
+void multiplyArrays(int arr1[], int arr2[], int result[], int size) {
+  for (int i = 0; i < size; i++) {
+    result[i] = arr1[i] * arr2[i]; // Multiply corresponding elements
+  }
+}
 
-// int targetPositions[4] = {0, 0, 0}; // Target positions
-float stepsPerRevolution = 200;  // Steps per revolution for the motor
+// define soft endstop values
+int motorIndicesSoftendstops_raw[4] = {degreesToSteps(1800,200), degreesToSteps(3600,200), degreesToSteps(90,200), degreesToSteps(1800,200)};
+int motorIndicesSoftendstops[4]; // is calculated in setup
+int motorIndicesStepsPerRevolution_raw[4] = {200, 200, 200, 200};
+int motorIndicesstepsPerRevolution[4]; // is calculated in setup
+
+// // int targetPositions[4] = {0, 0, 0}; // Target positions
+// float stepsPerRevolution = 200;  // Steps per revolution for the motor
 
 int delay_base = 500;
 
@@ -54,6 +64,8 @@ int bufferIndex = 0; // Index to track the buffer position
 boolean verbose = true; // Global toggle for verbose mode
 
 void setup() {
+  Serial.begin(115200);  // Start serial communication
+
   Serial.println('Setting up machine...');
   // Set step and direction pins as output
   pinMode(DirPin_specimen_rot, OUTPUT);
@@ -71,8 +83,12 @@ void setup() {
 
     // Set board LED pin as output
   pinMode(LED_BUILTIN, OUTPUT);
+
+  // Multiply the arrays
+  multiplyArrays(motorIndicesSoftendstops_raw, motorMicrostepping, motorIndicesSoftendstops, 4);
+
+  multiplyArrays(motorIndicesStepsPerRevolution_raw, motorMicrostepping, motorIndicesstepsPerRevolution, 4);
   
-  Serial.begin(115200);  // Start serial communication
 }
 
 
@@ -195,9 +211,10 @@ void moveMotor(int motorIndex, int degrees) {
   } else {
     digitalWrite(motorIndicesDir[motorIndex], LOW);
   }
-  int target_abs = abs(target);
 
-  int delay_steps = round(delay_base/motorMicrostepping[motorIndex]);
+  int curr_microstepping = motorMicrostepping[motorIndex];
+  int target_abs = abs(target) * curr_microstepping;
+  int delay_steps = round(delay_base/curr_microstepping);
 
   // Serial.println(motorIndex);
   int curr_endstop_pin = motorIndicesEndstop[motorIndex];
@@ -227,6 +244,9 @@ void moveMotor(int motorIndex, int degrees) {
 
   // reverse one step in case 0 position was reached
   if(motorPositions[motorIndex] == 0 - 1){
+    Serial.print("Motor ");
+    Serial.print(motorIndex);
+    Serial.println(" hit position 0.");
     // reverse motor direction
     if(target > 0){
       digitalWrite(motorIndicesDir[motorIndex], LOW);
@@ -243,6 +263,12 @@ void moveMotor(int motorIndex, int degrees) {
 
   // reverse one step in case soft endstop was reached
   if(motorPositions[motorIndex] == curr_endstop_soft + 1){
+    Serial.print("Motor ");
+    Serial.print(motorIndex);
+    Serial.print(" hit soft end position of ");
+    Serial.print(curr_endstop_soft);
+    Serial.println(".");
+    
     // reverse motor direction
     if(target > 0){
       digitalWrite(motorIndicesDir[motorIndex], LOW);
@@ -280,13 +306,13 @@ void sendMotorPositions() {
 void sendMotorDegrees() {
   Serial.print(2);
   Serial.print(',');
-  Serial.print(stepsToDegrees(motorPositions[0],200));
+  Serial.print(stepsToDegrees(motorPositions[0],motorIndicesstepsPerRevolution[0]));
   Serial.print(',');
-  Serial.print(stepsToDegrees(motorPositions[1],200));
+  Serial.print(stepsToDegrees(motorPositions[1],motorIndicesstepsPerRevolution[1]));
   Serial.print(',');
-  Serial.print(stepsToDegrees(motorPositions[2],200));
+  Serial.print(stepsToDegrees(motorPositions[2],motorIndicesstepsPerRevolution[2]));
   Serial.print(',');
-  Serial.println(stepsToDegrees(motorPositions[3],200));
+  Serial.println(stepsToDegrees(motorPositions[3],motorIndicesstepsPerRevolution[3]));
 }
 
 // Send homing states to Processing
