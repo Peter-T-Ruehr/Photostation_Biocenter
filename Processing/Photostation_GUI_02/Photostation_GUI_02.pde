@@ -2,6 +2,11 @@ import controlP5.*;
 import processing.serial.*;
 
 ControlP5 cp5;
+PImage backgroundImage; // Variable for the background Image_arm
+float rotationAngle = 0; // Variable to control rotation
+//PImage[] image_specimen_rot = new PImage[1];
+//PImage[] image_specimen_height = new PImage[1];
+//PImage[] image_cam = new PImage[1];
 PFont calibriFont;
 
 Serial arduinoPort;
@@ -12,7 +17,7 @@ int[] MaxmotorPositions = {0, 360, 90, 360, 360};
 
 int motors_to_control = 4;
 
-int windowWidth = 1000;
+int windowWidth = 1200;
 int windowHeight = 600;
 int buttonWidth = 45;    // Button width
 int buttonHeight = 25;    // Button height
@@ -20,17 +25,29 @@ int marginX = 10;         // Horizontal spacing between buttons
 int marginY = 10;         // Vertical spacing between buttons
 int labelWidth = 150;     // Width for the label column
 
+
+boolean isSpecHeightHomed = false; // Example control variable
+boolean isArmHomed = false; // Example control variable
+boolean isCameraHomed = false; // Example control variable
+
 void setup() {
   // Set up serial communication with Arduino (adjust COM port as needed)
   arduinoPort = new Serial(this, "COM5", 115200);  // Use the correct port number
   
-  size(1000, 600); // Set the window size
+  size(1200, 600); // Set the window size
   cp5 = new ControlP5(this);
 
   // Load the Calibri font
   calibriFont = createFont("Calibri", 12); 
   cp5.setFont(calibriFont); // Apply font globally to all buttons
-
+  
+   // Load the background image
+  backgroundImage = loadImage("03_angles_arm.png"); // Replace with your PNG file
+  //if (backgroundImage == null) {
+  //  println("Error: Could not load the image. Ensure '03_angles_arm.png' is in the sketch folder.");
+  //  exit();
+  //}
+  
   // Add row labels and buttons for each group
   int x = 50;
   int y = 20;  // Initial vertical position for the first row
@@ -166,6 +183,21 @@ void draw() {
   for (int i = 0; i < row_labels.length; i++) {
     text(row_labels[i], 20+155, (i+1)*(buttonHeight+marginY));
   }
+}
+
+// Function to draw the rotating image
+void drawRotatingImage() {
+  float imageX = 500 + marginX; // Position to the right of the GUI
+  float imageY = height / 2; // Center vertically
+
+  pushMatrix();
+  translate(imageX + backgroundImage.width / 2, imageY); // Move to image center
+  rotate(radians(rotationAngle)); // Apply rotation
+  imageMode(CENTER);
+  image(backgroundImage, 0, 0); // Draw the image
+  popMatrix();
+
+  rotationAngle += 0.5; // Update rotation angle for animation (change as needed)
 }
 
 // Function to disable buttons
@@ -361,25 +393,3 @@ void serialEvent(Serial port) {
     }
   }
 }
-
-//// Receive motor positions and homing states from Arduino
-//void serialEvent(Serial Port) {
-//  String posData = Port.readStringUntil('\n');
-//  posData = trim(posData); // Remove leading/trailing whitespace
-//  if (posData != null) {
-//    posData = trim(posData); // Remove any leading/trailing whitespace
-//    println("A: " + posData); // Print the received data to the console
-//    if(posData.startsWith("0")){
-//      String[] positions = split(trim(posData), ',');
-//      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
-//        motorPositions[i] = int(positions[i]);
-        
-//      }
-//    } else if (posData.startsWith("1")) {
-//      String[] positions = split(trim(posData), ',');
-//      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
-//        homingStates[i] = int(positions[i]);
-//      }
-//    }
-//  }
-//}

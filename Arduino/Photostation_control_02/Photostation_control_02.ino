@@ -14,7 +14,6 @@ int EndstopPin_specimen_height = 10;
 int motorIndicesDir[4] = {DirPin_specimen_rot, DirPin_arm, DirPin_cam, DirPin_specimen_height};
 int motorIndicesStep[4] = {StepPin_specimen_rot, StepPin_arm, StepPin_cam, StepPin_specimen_height};
 
-
 int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
 int motorMicrostepping[4] = {1, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
@@ -27,6 +26,7 @@ const int bufferSize = 64; // Maximum size of the input buffer
 char inputBuffer[bufferSize]; // Buffer to hold the incoming data
 int bufferIndex = 0; // Index to track the buffer position
 
+boolean verbose = true; // Global toggle for verbose mode
 
 void setup() {
   Serial.println('Setting up machine...');
@@ -95,11 +95,13 @@ void executeCommand(const char* command, int value1, int value2) {
       homeMotor(value1);
     } else if (strcmp(command, "STATUS_MOTORS") == 0) {
       sendMotorPositions();
+      sendMotorDegrees();
     } else if (strcmp(command, "STATUS_HOME") == 0) {
       sendHomingStates();
     } else if (strcmp(command, "RESET_SPEC_ROT") == 0) {
       motorPositions[0] = 0;
       sendMotorPositions();
+      sendMotorDegrees();
     }
 }
 
@@ -115,16 +117,20 @@ void turnLedOff() {
 
 // void reportStatus() {
 //   sendMotorPositions();
+//   sendMotorDegrees();
 //   sendHomingStates();
 // }
 
 void homeMotor(int motorIndex){
   // Move until the endstop is triggered
+  verbose = false;
   while (digitalRead(EndstopPin_arm) == LOW) { // LOW means not triggered
     moveMotor(motorIndex, degreesToSteps(-1, 200));
   }
+  verbose = true;
   motorPositions[motorIndex] = 0;
   sendMotorPositions();
+  sendMotorDegrees();
   homingStates[motorIndex] = 1;
   sendHomingStates();
 }
@@ -140,33 +146,24 @@ void moveMotorTo(int motorIndex, float degrees){
 void moveMotor(int motorIndex, int degrees) {
   float target = -1;
   if(motorIndex == 0){
-    Serial.print("degrees: ");
-    Serial.println(degrees);
     target = degreesToSteps(degrees, 200);
-    Serial.print("target: ");
-    Serial.println(target);
   } else if(motorIndex == 1){
-    Serial.print("degrees: ");
-    Serial.println(degrees);
     target = degreesToSteps(degrees, 200);
-    Serial.print("target: ");
-    Serial.println(target);
   } else if(motorIndex == 2){
-    Serial.print("degrees: ");
-    Serial.println(degrees);
     target = degreesToSteps(degrees, 200);
-    Serial.print("target: ");
-    Serial.println(target);
   } else if (motorIndex == 3){
-    Serial.print("degrees: ");
-    Serial.println(degrees);
     target = degreesToSteps(degrees, 200);
-    Serial.print("target: ");
-    Serial.println(target);
   } else {
     Serial.print("Motor not defined.");
   }
   
+  if (verbose) {
+    Serial.print("target: ");
+    Serial.println(target);
+    Serial.print("degrees: ");
+    Serial.println(degrees);
+  }
+
   if(target > 0){
     digitalWrite(motorIndicesDir[motorIndex], HIGH);
     motorPositions[motorIndex] = motorPositions[motorIndex]+target;
@@ -184,7 +181,10 @@ void moveMotor(int motorIndex, int degrees) {
     delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
   }
 
-  sendMotorPositions();
+  if (verbose) {
+    sendMotorDegrees();
+    sendMotorPositions();
+  }
 }
 
 // Send motor positions to Processing
@@ -198,6 +198,19 @@ void sendMotorPositions() {
   Serial.print(motorPositions[2]);
   Serial.print(',');
   Serial.println(motorPositions[3]);
+}
+
+// Send motor degrees to Processing
+void sendMotorDegrees() {
+  Serial.print(2);
+  Serial.print(',');
+  Serial.print(stepsToDegrees(motorPositions[0],200));
+  Serial.print(',');
+  Serial.print(stepsToDegrees(motorPositions[1],200));
+  Serial.print(',');
+  Serial.print(stepsToDegrees(motorPositions[2],200));
+  Serial.print(',');
+  Serial.println(stepsToDegrees(motorPositions[3],200));
 }
 
 // Send homing states to Processing
