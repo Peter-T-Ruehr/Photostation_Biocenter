@@ -1,143 +1,289 @@
 import controlP5.*;
-// PShape backgrounds_armVG; // To store the SVG background
 import processing.serial.*;
 
 ControlP5 cp5;
-PImage[] backgrounds_arm = new PImage[1];
-PImage[] backgrounds_specimen = new PImage[1];
+PFont calibriFont;
+
 Serial arduinoPort;
 int[] motorPositions = {0, 0, 0, 0};  // Current positions of the motors
-int[] homingStates = {0, 0, 1};  // Current Homing states of the motors
-int[] targetPositions = {0, 0, 0}; // Slider values (target positions)
-int[] motorMicrostepping = {0, 1, 1, 1}; // Microstepping (1/x)
-int[] MaxmotorPositions_raw = {0, 360, 90, 360};
-int[] MaxmotorPositions = multiplyArrays(MaxmotorPositions_raw, motorMicrostepping);
+int[] homingStates = {1, 0, 0, 0};  // Current Homing states of the motors
+int[] targetPositions = {0, 0, 0, 0}; // Slider values (target positions)
+int[] MaxmotorPositions = {0, 360, 90, 360, 360};
 
-int motors_to_control = 3;
+int motors_to_control = 4;
 
-// Define motor rotations
-float stepAngle = 1.8; // Step angle in degrees
-float gearRatio = 1;    // Approximate gear reduction ratio
-float stepsPerRevolution = 360 / (stepAngle * gearRatio);
-  
-int backgroundIndex_arm = 0;
-int backgroundIndex_specimen = 0;
-int previousbackgroundIndex_arm = -1;
-int previousmotorPosition = -1;
-String previousposData = "-1";
-
-float imgX = 300; // X-coordinate of the image's top-left corner
-float imgY = 200; // Y-coordinate of the image's top-left corner
-float imgWidth, imgHeight;
-
-float miccrostepping_specimen = 8;
-float miccrostepping_arm = 1;
+int windowWidth = 1000;
+int windowHeight = 600;
+int buttonWidth = 45;    // Button width
+int buttonHeight = 25;    // Button height
+int marginX = 10;         // Horizontal spacing between buttons
+int marginY = 10;         // Vertical spacing between buttons
+int labelWidth = 150;     // Width for the label column
 
 void setup() {
-  println(MaxmotorPositions[0]);
-  size(1000, 1000); // Match the SVG's dimensions for best alignment
-  
-  // Load background images
-  for (int i = 0; i < backgrounds_specimen.length; i++) {
-    backgrounds_specimen[i] = loadImage("01_angles_specimen.png");
-  }
-  for (int i = 0; i < backgrounds_arm.length; i++) {
-    backgrounds_arm[i] = loadImage("02_angles_arm.png");
-  }
-  
   // Set up serial communication with Arduino (adjust COM port as needed)
-  arduinoPort = new Serial(this, "COM4", 115200);  // Use the correct port number
+  arduinoPort = new Serial(this, "COM5", 115200);  // Use the correct port number
   
-  // Initialize ControlP5 GUI components
+  size(1000, 600); // Set the window size
   cp5 = new ControlP5(this);
+
+  // Load the Calibri font
+  calibriFont = createFont("Calibri", 12); 
+  cp5.setFont(calibriFont); // Apply font globally to all buttons
+
+  // Add row labels and buttons for each group
+  int x = 50;
+  int y = 20;  // Initial vertical position for the first row
+
+  // Rotation Buttons Specimen
+  // positive
+  String[] rotationButtons_specimen_positive = {
+    // "Set Specimen Rotation to 0", "Rotate Specimen to 0°", 
+    // "Rotate Specimen to 180°", "Rotate Specimen to 270°", "Rotate Specimen to 360°"
+    "1°", "5°",  "45°", 
+    "90°", "180°", "360°", 
+  };
+  y = addRow("RotControlsSpecimensPos", rotationButtons_specimen_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // negative
+  String[] rotationButtons_specimen_negative = {
+    // "Rotate Specimen to 0°", 
+    // "Rotate Specimen to 180°", "Rotate Specimen to 270°", "Rotate Specimen to 360°"
+    "-1°", "-5°",  "-45°", 
+    "-90°", "-180°", "-360°", 
+  };
+  y = addRow("RotControlsSpecimensNeg", rotationButtons_specimen_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // Specimen Height Buttons
+  // positive
+  String[] specimenHeightButtons_positive = {
+     "-0.1 mm", "-0.5 mm", "-1 mm", "-5 mm", "-10 mm", 
+  };
+  y = addRow("SpecHeightControlsPos", specimenHeightButtons_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // negative
+  String[] specimenHeightButtons_negative = {
+     "0.1 mm", "0.5 mm", "1 mm", "5 mm", "10 mm", 
+  };
+  y = addRow("SpecHeightControlsNeg", specimenHeightButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
   
+  // Arm Buttons
+  // positive
+  String[] armButtons_positive = {
+    //Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
+    //"Move Arm to 67.5°", "Move Arm to 90°"
+    "1 mm", "5 mm", "10 mm", "45 mm", "90 mm"
+  };
+  y = addRow("ArmControlsPos", armButtons_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
-  // Create sliders to control each motor
-  for (int i = 0; i < motors_to_control; i++) {
-    cp5.addSlider("motor" + (i + 1))
-       .setPosition(50, 50 + i * 60) // Adjust position to fit over SVG
-       .setRange(0, MaxmotorPositions[i+1])
-       .setSize(300, 20)  // Slider width and height (px)
-       .setValue(0)
-       .setId(i);
+  // negative
+  String[] armButtons_negative = {
+    // "Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
+    //"Move Arm to 67.5°", "Move Arm to 90°"
+    "-1 mm", "-5 mm", "-10 mm", "-45 mm", "-90 mm"
+  };
+  y = addRow("ArmControlsNeg", armButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // Camera Buttons
+  // positive
+  String[] cameraButtons_positive = {
+    //Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
+    //"Move Arm to 67.5°", "Move Arm to 90°"
+    "1 mm", "5 mm", "10 mm", "45 mm", "90 mm"
+  };
+  y = addRow("CamControlsPos", cameraButtons_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // negative
+  String[] cameraButtons_negative = {
+    // "Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
+    //"Move Arm to 67.5°", "Move Arm to 90°"
+    "-1 mm", "-5 mm", "-10 mm", "-45 mm", "-90 mm"
+  };
+  y = addRow("CamControlsNeg", cameraButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
+
+  // Homing
+  int buttonWidth = 120;    // Button width
+  String[] HomingButtons = {
+    "Specimen Height", "Arm", "Camera Offset"
+  };
+  y = addRow("HomingControls", HomingButtons, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // Specimen Rot
+  String[] SpecimenRotationReset = {
+    "Reset"
+  };
+  y = addRow("SpecRotReset", SpecimenRotationReset, x, y, buttonWidth, buttonHeight, marginX, marginY);
+
+  // Save Button
+  String[] saveButton = {
+    "Save Setting"
+  };
+  y = addRow("SaveSettingsControls", saveButton, x, y, buttonWidth, buttonHeight, marginX, marginY);
+
+  // Check if the buttons fit inside the window
+  if (y > windowHeight) {
+    println("Warning: Buttons may not fit in the current window size.");
   }
   
-  // Button to home all motors
-  cp5.addButton("Home Motors")
-     .setPosition(400, 50)
-     .setSize(150, 40);
+  //// Disable some buttons initially
+  //  disableButtons(new String[]{
+  //    "RotControlsSpecimensPos_0", "RotControlsSpecimensPos_1"
+  //  });
 }
 
 void draw() {
-  background(255);
+  background(240); // Set a light background
   
-  //// Draw the SVG file as the background
-  //shape(backgrounds_armVG, 0, 0, width, height);
+  String row_labels[] = {"Rotate Specimen by", "Rotate Specimen by", 
+    "Move Specimen Up by", "Move Specimen Down by",
+    "Mova Arm Outwards by", "Move Arm Inwards by",
+    "Mova Camera Outwards by", "Move Camera Inwards by",
+    "Home Motors", "Specimen Rotation",
+    "Save Settings"
+  };
   
-  // Draw the rotating image at a fixed position
-  pushMatrix(); // Save the current transformation
-  translate(100 + 200 / 2, 300 + 200 / 2); // Move origin to the image center
-  int current_microstepping = motorMicrostepping[1];
-  rotate(degreesToRadians(motorPositions[1]/current_microstepping)); // Rotate around the image's center
-  imageMode(CENTER); // Draw the image from its center
-  image(backgrounds_specimen[backgroundIndex_specimen], 0, 0, 200, 200); // width, height
-  popMatrix(); // Restore the original transformation
-  
-  // Draw the rotating image at a fixed position
-  pushMatrix(); // Save the current transformation
-  translate(400 + 400 / 2, 200 + 400/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
-  rotate(-1*degreesToRadians(motorPositions[2])); // Rotate around the image's center
-  imageMode(CENTER); // Draw the image from its center
-  image(backgrounds_arm[backgroundIndex_arm], 0, 0, 400, 400); // width, height
-  popMatrix(); // Restore the original transformation
-  
-  
-  // GUI components are automatically drawn on top by ControlP5
-  // Display current motor positions
+  textSize(13.5);
   fill(0);
-  textSize(16);
-  for (int i = 0; i < motors_to_control; i++) {
-    text("Motor " + (i + 1) + " Position: " + motorPositions[i], 50, 40 + i * 60);
-    //println("Motor " + (i + 1) + " Position: " + motorPositions[i]);
+  int y = 20;
+  int x = 20;
+  for (int i = 0; i < row_labels.length; i++) {
+    text(row_labels[i], 20, (i+1)*(buttonHeight+marginY));
   }
-  //for (int i = 0; i < motors_to_control; i++) {
-  //  float motorDegrees = stepsToDegrees(motorPositions[i], stepAngle, gearRatio);
-  //  text("Motor " + (i + 1) + " Position: " + nf(motorDegrees, 1, 2) + "°", 50, 40 + i * 60); // 150, 90 + i * 80
-  //}
 }
 
-// Function to multiply two arrays element-wise
-int[] multiplyArrays(int[] a, int[] b) {
-  if (a.length != b.length) {
-    println("Error: Arrays must be of the same length");
-    return null; // Return null if lengths don't match
+// Function to disable buttons
+void disableButtons(String[] buttonNames) {
+  for (String name : buttonNames) {
+    cp5.getController(name)
+       .setLock(true); // Disable the button
+       //.setColorActive(color(180)); // Gray out active state
+       //.setColorBackground(color(200)) // Gray out background
+       //.setColorForeground(color(150)); // Gray out foreground
   }
-
-  int[] result = new int[a.length];
-  for (int i = 0; i < a.length; i++) {
-    result[i] = a[i] * b[i];
-  }
-  return result;
 }
 
-float degreesToRadians(float degrees) {
-  return degrees * PI / 180; // Multiply degrees by π/180 to get radians
+// Function to enable buttons
+void enableButtons(String[] buttonNames) {
+  for (String name : buttonNames) {
+    cp5.getController(name)
+       .setLock(false); // Enable the button
+       //.setColorActive(color(0, 128, 255)) // Restore active state
+       //.setColorBackground(color(200, 200, 255)) // Restore background
+       //.setColorForeground(color(50, 50, 200)); // Restore foreground
+  }
 }
 
+// Function to add a row of buttons and a label
+int addRow(String label, String[] labels, int x, int y, int width, int height, int marginX, int marginY) {  
+  // Add buttons for the row (place them after the label)
+  int buttonsInRow = labels.length;
+  for (int i = 0; i < buttonsInRow; i++) {
+    cp5.addButton(label + "_" + i)
+       .setLabel(labels[i]) // Use the label as written
+       .setPosition(x + labelWidth + i * (width + marginX), y)
+       .setSize(width, height);
+  }
+
+  // Return the next vertical position after this row
+  return y + height + marginY;
+}
+  
 void controlEvent(ControlEvent theEvent) {
   if (theEvent.isController()) {
-    if (theEvent.getController().getName().equals("Home Motors")) {
-      arduinoPort.write('h');  // Send homing command
-    } else {
-      int motorIndex =  theEvent.getController().getId();
-      if(motorIndex == -1){
-        motorIndex = 1;
-      }
-      
-      // println(current_microstepping);
-      targetPositions[motorIndex] = int (theEvent.getController().getValue());
-      sendTargetPositions();
+    String name = theEvent.getController().getName();
+    println("Button " + name + " clicked!");
+    if (theEvent.getController().getName().equals("RotControlsSpecimensPos_0")) {
+      arduinoPort.write("REL 0 1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_1")) {
+      arduinoPort.write("REL 0 5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_2")) {
+      arduinoPort.write("REL 0 45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_3")) {
+      arduinoPort.write("REL 0 90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_4")) {
+      arduinoPort.write("REL 0 180\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensPos_5")) {
+      arduinoPort.write("REL 0 360\n");  // Send homing command
+    } 
+    else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_0")) {
+      arduinoPort.write("REL 0 -1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_1")) {
+      arduinoPort.write("REL 0 -5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_2")) {
+      arduinoPort.write("REL 0 -45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_3")) {
+      arduinoPort.write("REL 0 -90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_4")) {
+      arduinoPort.write("REL 0 -180\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_5")) {
+      arduinoPort.write("REL 0 -360\n");  // Send homing command
+    }
+    else if (theEvent.getController().getName().equals("SpecHeightControlsPos_0")) {
+      arduinoPort.write("REL 1 1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_1")) {
+      arduinoPort.write("REL 1 5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_2")) {
+      arduinoPort.write("REL 1 45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_3")) {
+      arduinoPort.write("REL 1 90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_4")) {
+      arduinoPort.write("REL 1 180\n");  // Send homing command
+    }
+    else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_0")) {
+      arduinoPort.write("REL 1 -1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_1")) {
+      arduinoPort.write("REL 1 -5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_2")) {
+      arduinoPort.write("REL 1 -45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_3")) {
+      arduinoPort.write("REL 1 -90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("SpecHeightControlsNeg_4")) {
+      arduinoPort.write("REL 1 -180\n");  // Send homing command
+    }
+    else if (theEvent.getController().getName().equals("ArmControlsPos_0")) {
+      arduinoPort.write("REL 2 1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsPos_1")) {
+      arduinoPort.write("REL 2 5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsPos_2")) {
+      arduinoPort.write("REL 2 45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsPos_3")) {
+      arduinoPort.write("REL 2 90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsPos_4")) {
+      arduinoPort.write("REL 2 180\n");  // Send homing command
+    }
+    else if (theEvent.getController().getName().equals("ArmControlsNeg_0")) {
+      arduinoPort.write("REL 2 -1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsNeg_1")) {
+      arduinoPort.write("REL 2 -5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsNeg_2")) {
+      arduinoPort.write("REL 2 -45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsNeg_3")) {
+      arduinoPort.write("REL 2 -90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("ArmControlsNeg_4")) {
+      arduinoPort.write("REL 2 -180\n");  // Send homing command
+    }
+    else if (theEvent.getController().getName().equals("CamControlsPos_0")) {
+      arduinoPort.write("REL 3 1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsPos_1")) {
+      arduinoPort.write("REL 3 5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsPos_2")) {
+      arduinoPort.write("REL 3 45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsPos_3")) {
+      arduinoPort.write("REL 3 90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsPos_4")) {
+      arduinoPort.write("REL 3 180\n");  // Send homing command
+    }
+    else if (theEvent.getController().getName().equals("CamControlsNeg_0")) {
+      arduinoPort.write("REL 3 -1\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsNeg_1")) {
+      arduinoPort.write("REL 3 -5\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsNeg_2")) {
+      arduinoPort.write("REL 3 -45\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsNeg_3")) {
+      arduinoPort.write("REL 3 -90\n");  // Send homing command
+    } else if (theEvent.getController().getName().equals("CamControlsNeg_4")) {
+      arduinoPort.write("REL 3 -180\n");  // Send homing command
     }
   }
 }
@@ -151,37 +297,11 @@ void sendTargetPositions() {
   arduinoPort.write('\n');  // End of transmission
 }
 
-// Receive motor positions and homing states from Arduino
-void serialEvent(Serial myPort) {
-  String posData = myPort.readStringUntil('\n');
-  posData = trim(posData); // Remove leading/trailing whitespace
-  if (posData != null) {
-    if(posData.startsWith("0")){
-      String[] positions = split(trim(posData), ',');
-      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
-        motorPositions[i] = int(positions[i]);
-        
-        backgroundIndex_arm = 0;
-        backgroundIndex_specimen = 0;
-      }
-    } else if (posData.startsWith("1")) {
-      String[] positions = split(trim(posData), ',');
-      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
-        homingStates[i] = int(positions[i]);
-      }
-    }
+// Function to handle incoming serial data
+void serialEvent(Serial port) {
+  String received = port.readStringUntil('\n'); // Read the incoming data
+  if (received != null) {
+    received = trim(received); // Remove any leading/trailing whitespace
+    println("A: " + received); // Print the received data to the console
   }
-  
-  
-}
-
-float degreesToSteps(float degrees, float stepAngle, float gearRatio) {
-  float stepsPerRevolution = 360 / stepAngle * gearRatio;
-  return round((degrees / 360) * stepsPerRevolution);
-}
-
-// Converts steps to degrees based on step angle and gear ratio
-float stepsToDegrees(int steps, float stepAngle, float gearRatio) {
-  float stepsPerRevolution = 360 / stepAngle * gearRatio;
-  return (steps * 360.0) / stepsPerRevolution;
 }
