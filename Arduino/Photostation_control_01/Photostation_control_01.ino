@@ -17,6 +17,7 @@ int endstop3Pin = 10; // 12;
 // int endstop4Pin = 10; // 13;
 
 int motorPositions[3] = {0, 0, 0};  // Current motor positions (steps)
+int motorMicrostepping[3] = {8, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[3] = {0, 0, 1};  // Current homing states (0 = not homed; 1 = homed)
 int targetPositions[4] = {0, 0, 0}; // Target positions
 int stepsPerRevolution = 200;  // Steps per revolution for the motor
@@ -115,10 +116,13 @@ void setMotorDirection(int motorIndex, int direction) {
 
 // Step the motor once
 void stepMotor(int motorIndex) {
-  digitalWrite(motor1StepPin + motorIndex * 2, HIGH);  // Step pin HIGH
-  delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-  digitalWrite(motor1StepPin + motorIndex * 2, LOW);   // Step pin LOW
-  delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  // int current_microstepping = 1;
+  // for (int i = 0; i < current_microstepping; i++) {
+    digitalWrite(motor1StepPin + motorIndex * 2, HIGH);  // Step pin HIGH
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+    digitalWrite(motor1StepPin + motorIndex * 2, LOW);   // Step pin LOW
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  // }
 }
 
 // Send motor positions to Processing
