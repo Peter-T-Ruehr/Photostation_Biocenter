@@ -55,6 +55,7 @@ void setup() {
   y = addRow("RotControlsSpecimensNeg", rotationButtons_specimen_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
   // Specimen Height Buttons
+  y = y+buttonHeight+marginY;
   // positive
   String[] specimenHeightButtons_positive = {
      "-0.1 mm", "-0.5 mm", "-1 mm", "-5 mm", "-10 mm", 
@@ -69,11 +70,12 @@ void setup() {
   
   
   // Arm Buttons
+  y = y+buttonHeight+marginY;
   // positive
   String[] armButtons_positive = {
     //Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
     //"Move Arm to 67.5°", "Move Arm to 90°"
-    "1 mm", "5 mm", "10 mm", "45 mm", "90 mm"
+    "1°", "5°", "10°", "45°", "90°"
   };
   y = addRow("ArmControlsPos", armButtons_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
@@ -81,16 +83,17 @@ void setup() {
   String[] armButtons_negative = {
     // "Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
     //"Move Arm to 67.5°", "Move Arm to 90°"
-    "-1 mm", "-5 mm", "-10 mm", "-45 mm", "-90 mm"
+    "-1°", "-5°", "-10°", "-45°", "-90°"
   };
   y = addRow("ArmControlsNeg", armButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
   // Camera Buttons
+  y = y+buttonHeight+marginY;
   // positive
   String[] cameraButtons_positive = {
     //Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
     //"Move Arm to 67.5°", "Move Arm to 90°"
-    "1 mm", "5 mm", "10 mm", "45 mm", "90 mm"
+    "1 mm", "5 mm", "10 mm", "50 mm", "100 mm"
   };
   y = addRow("CamControlsPos", cameraButtons_positive, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
@@ -98,14 +101,15 @@ void setup() {
   String[] cameraButtons_negative = {
     // "Move Arm to 0°", "Move Arm to 22.5°", "Move Arm to 45°", 
     //"Move Arm to 67.5°", "Move Arm to 90°"
-    "-1 mm", "-5 mm", "-10 mm", "-45 mm", "-90 mm"
+    "-1 mm", "-5 mm", "-10 mm", "-50 mm", "-100 mm"
   };
   y = addRow("CamControlsNeg", cameraButtons_negative, x, y, buttonWidth, buttonHeight, marginX, marginY);
 
   // Homing
-  int buttonWidth = 120;    // Button width
+  y = y+buttonHeight+marginY;
+  buttonWidth = buttonWidth*2+marginX;    // Button width
   String[] HomingButtons = {
-    "Specimen Height", "Arm", "Camera Offset"
+    "Specimen Height", "Arm Tilt", "Camera Offset"
   };
   y = addRow("HomingControls", HomingButtons, x, y, buttonWidth, buttonHeight, marginX, marginY);
   
@@ -116,6 +120,7 @@ void setup() {
   y = addRow("SpecRotReset", SpecimenRotationReset, x, y, buttonWidth, buttonHeight, marginX, marginY);
 
   // Save Button
+  y = y+buttonHeight+marginY;
   String[] saveButton = {
     "Save Setting"
   };
@@ -126,29 +131,40 @@ void setup() {
     println("Warning: Buttons may not fit in the current window size.");
   }
   
-  //// Disable some buttons initially
-  //  disableButtons(new String[]{
-  //    "RotControlsSpecimensPos_0", "RotControlsSpecimensPos_1"
-  //  });
+  // Disable some buttons initially
+    disableButtons(new String[]{
+      "SpecHeightControlsPos_0", "SpecHeightControlsPos_1", "SpecHeightControlsPos_2", "SpecHeightControlsPos_3", "SpecHeightControlsPos_4",
+      "SpecHeightControlsNeg_0", "SpecHeightControlsNeg_1", "SpecHeightControlsNeg_2", "SpecHeightControlsNeg_3", "SpecHeightControlsNeg_4",
+      "ArmControlsPos_0", "ArmControlsPos_1", "ArmControlsPos_2", "ArmControlsPos_3", "ArmControlsPos_4",
+      "ArmControlsNeg_0", "ArmControlsNeg_1", "ArmControlsNeg_2", "ArmControlsNeg_3", "ArmControlsNeg_4",
+      "CamControlsPos_0", "CamControlsPos_1", "CamControlsPos_2", "CamControlsPos_3", "CamControlsPos_4",
+      "CamControlsNeg_0", "CamControlsNeg_1", "CamControlsNeg_2", "CamControlsNeg_3", "CamControlsNeg_4"
+    });
 }
 
 void draw() {
   background(240); // Set a light background
   
-  String row_labels[] = {"Rotate Specimen by", "Rotate Specimen by", 
-    "Move Specimen Up by", "Move Specimen Down by",
-    "Mova Arm Outwards by", "Move Arm Inwards by",
-    "Mova Camera Outwards by", "Move Camera Inwards by",
+  String row_labels[] = {"Rotate Specimen Right", "Rotate Specimen Left", 
+    "",
+    "Raise Specimen by", "Lower Specimen by",
+    "",
+    "Tilt Arm Down by", "Tilt Arm Up by",
+    "",
+    "Increase Camera Distance by", "Decrease Camera Distance by",
+    "",
     "Home Motors", "Specimen Rotation",
+    "",
     "Save Settings"
   };
   
   textSize(13.5);
+  textAlign(RIGHT);
   fill(0);
   int y = 20;
   int x = 20;
   for (int i = 0; i < row_labels.length; i++) {
-    text(row_labels[i], 20, (i+1)*(buttonHeight+marginY));
+    text(row_labels[i], 20+155, (i+1)*(buttonHeight+marginY));
   }
 }
 
@@ -284,6 +300,34 @@ void controlEvent(ControlEvent theEvent) {
       arduinoPort.write("REL 3 -90\n");  // Send homing command
     } else if (theEvent.getController().getName().equals("CamControlsNeg_4")) {
       arduinoPort.write("REL 3 -180\n");  // Send homing command
+    } 
+    // Home Specimen Height
+    else if (theEvent.getController().getName().equals("HomingControls_0")) {
+      arduinoPort.write("HOME 1 0\n");  // Send homing command
+      enableButtons(new String[]{
+        "SpecHeightControlsPos_0", "SpecHeightControlsPos_1", "SpecHeightControlsPos_2", "SpecHeightControlsPos_3", "SpecHeightControlsPos_4",
+        "SpecHeightControlsNeg_0", "SpecHeightControlsNeg_1", "SpecHeightControlsNeg_2", "SpecHeightControlsNeg_3", "SpecHeightControlsNeg_4"
+      });
+    }
+    // Home Arm
+    else if (theEvent.getController().getName().equals("HomingControls_1")) {
+      arduinoPort.write("HOME 2 0\n");  // Send homing command
+      enableButtons(new String[]{
+        "ArmControlsPos_0", "ArmControlsPos_1", "ArmControlsPos_2", "ArmControlsPos_3", "ArmControlsPos_4",
+        "ArmControlsNeg_0", "ArmControlsNeg_1", "ArmControlsNeg_2", "ArmControlsNeg_3", "ArmControlsNeg_4"
+      });
+    }
+    // Home Camera Offset
+    else if (theEvent.getController().getName().equals("HomingControls_2")) {
+      arduinoPort.write("HOME 3 0\n");  // Send homing command
+      enableButtons(new String[]{
+        "CamControlsPos_0", "CamControlsPos_1", "CamControlsPos_2", "CamControlsPos_3", "CamControlsPos_4",
+        "CamControlsNeg_0", "CamControlsNeg_1", "CamControlsNeg_2", "CamControlsNeg_3", "CamControlsNeg_4"
+      });
+    }
+    // Reset Specimen Rotation
+    else if (theEvent.getController().getName().equals("SpecRotReset_0")) {
+      arduinoPort.write("RESET_SPEC_ROT 0 0\n");  // Send homing command
     }
   }
 }
@@ -303,5 +347,39 @@ void serialEvent(Serial port) {
   if (received != null) {
     received = trim(received); // Remove any leading/trailing whitespace
     println("A: " + received); // Print the received data to the console
+    
+    if(received.startsWith("0")){
+      String[] positions = split(trim(received), ',');
+      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
+        motorPositions[i-1] = int(positions[i]);
+      }
+    } else if (received.startsWith("1")) {
+      String[] positions = split(trim(received), ',');
+      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
+        homingStates[i-1] = int(positions[i]);
+      }
+    }
   }
 }
+
+//// Receive motor positions and homing states from Arduino
+//void serialEvent(Serial Port) {
+//  String posData = Port.readStringUntil('\n');
+//  posData = trim(posData); // Remove leading/trailing whitespace
+//  if (posData != null) {
+//    posData = trim(posData); // Remove any leading/trailing whitespace
+//    println("A: " + posData); // Print the received data to the console
+//    if(posData.startsWith("0")){
+//      String[] positions = split(trim(posData), ',');
+//      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
+//        motorPositions[i] = int(positions[i]);
+        
+//      }
+//    } else if (posData.startsWith("1")) {
+//      String[] positions = split(trim(posData), ',');
+//      for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
+//        homingStates[i] = int(positions[i]);
+//      }
+//    }
+//  }
+//}

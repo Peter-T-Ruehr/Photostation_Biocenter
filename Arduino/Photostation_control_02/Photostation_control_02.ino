@@ -97,6 +97,9 @@ void executeCommand(const char* command, int value1, int value2) {
       sendMotorPositions();
     } else if (strcmp(command, "STATUS_HOME") == 0) {
       sendHomingStates();
+    } else if (strcmp(command, "RESET_SPEC_ROT") == 0) {
+      motorPositions[0] = 0;
+      sendMotorPositions();
     }
 }
 
