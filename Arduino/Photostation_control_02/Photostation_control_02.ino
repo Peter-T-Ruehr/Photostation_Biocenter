@@ -2,15 +2,15 @@
 int DirPin_specimen_rot = 2;
 int StepPin_specimen_rot = 3;
 int EndstopPin_specimen_rot = 11; // connect to GND
-int StepPin_specimen_height = 9;
+int DirPin_specimen_height = 4;
+int StepPin_specimen_height = 5;
 int EndstopPin_specimen_height = 10;
-int DirPin_arm = 4;
-int StepPin_arm = 5;
+int DirPin_arm = 6;
+int StepPin_arm = 7;
 int EndstopPin_arm = 10;
-int DirPin_cam = 6;
-int StepPin_cam = 7;
+int DirPin_cam = 8;
+int StepPin_cam = 9;
 int EndstopPin_cam = 10;
-int DirPin_specimen_height = 8;
 
 /*
 0 Specimen rotation

@@ -38,7 +38,7 @@ void setup() {
   // Set up serial communication with Arduino (adjust COM port as needed)
   arduinoPort = new Serial(this, "COM5", 115200);  // Use the correct port number
   
-  size(1200, 600); // Set the window size
+  size(1125, 600); // Set the window size
   cp5 = new ControlP5(this);
 
   // Load the Calibri font
@@ -287,7 +287,7 @@ void draw() {
   
   // Draw the rotating specimen image at a fixed position
   pushMatrix(); // Save the current transformation
-  translate(15 + 550 + 150 / 2, 5 + 150/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  translate(15 + 550 + 150 / 2, 17 + 150/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
   rotate(degreesToRadians(motorDegrees[0])); // Rotate around the image's center
   imageMode(CENTER); // Draw the image from its center
   image(image_specimen_rot, 0, 0, 150, 150); // width, height
@@ -570,7 +570,7 @@ void save_log_file() {
                     nf(hour(), 2) + "-" + 
                     nf(minute(), 2) + "-" + 
                     nf(second(), 2);
-  String fileName = Date + ".txt";
+  String fileName = "log_"+Date + ".txt";
   String[] data; // Array to hold the content
   // Prepare the data
   data = new String[13];
