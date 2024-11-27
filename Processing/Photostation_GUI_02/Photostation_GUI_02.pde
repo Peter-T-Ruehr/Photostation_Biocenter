@@ -2,6 +2,9 @@ import controlP5.*;
 import processing.serial.*;
 
 ControlP5 cp5;
+
+String script_version = "0.0.9031";
+
 PImage image_specimen_rot; // Variable for the Image image_specimen_rot
 PImage image_specimen_height; // Variable for the Image image_specimen_height
 PImage ImageMachine; // Variable for the Image ImageMachine
@@ -25,10 +28,11 @@ int marginX = 10;         // Horizontal spacing between buttons
 int marginY = 10;         // Vertical spacing between buttons
 int labelWidth = 150;     // Width for the label column
 
-
 boolean isSpecHeightHomed = false; // Example control variable
 boolean isArmHomed = false; // Example control variable
 boolean isCameraHomed = false; // Example control variable
+
+String specimen_name;
 
 void setup() {
   // Set up serial communication with Arduino (adjust COM port as needed)
@@ -41,15 +45,16 @@ void setup() {
   calibriFont = createFont("Calibri", 12); 
   cp5.setFont(calibriFont); // Apply font globally to all buttons
   
-   // Load the background image
+  int x = 50;  // Initial vertical position for the first row
+  int y = 20;  // Initial horizontal position for the first row
+  
+  // Load the background image
   image_specimen_rot = loadImage("01_angles_specimen.png");
   image_specimen_height = loadImage("02_specimen_height.png");
   ImageArm = loadImage("03_arm.png");
   ImageMachine = loadImage("00_immovable.png");
   
   // Add row labels and buttons for each group
-  int x = 50;
-  int y = 20;  // Initial vertical position for the first row
 
   // Rotation Buttons Specimen
   // positive
@@ -138,9 +143,20 @@ void setup() {
   // Save Button
   y = y+buttonHeight+marginY;
   String[] saveButton = {
-    "Save Setting"
+    "Save Settings"
   };
-  y = addRow("SaveSettingsControls", saveButton, x, y, buttonWidth, buttonHeight, marginX, marginY);
+  
+  // add specimen name text field
+  PFont font = createFont("arial",16);
+  cp5.addTextfield("specimen_name")
+    .setPosition(x + 50+buttonWidth, y)
+    .setSize(100, buttonHeight)
+    .setAutoClear(false)
+     .setFont(font)
+    .setValue("<>");
+    
+  y = addRow("SaveSettingsControls", saveButton, x+buttonWidth+marginX, y, buttonWidth, buttonHeight, marginX, marginY);
+  
   
   // add buttons around the specimen rotation image
   // specimen to 180°
@@ -297,7 +313,10 @@ void draw() {
   int x = 20;
   for (int i = 0; i < row_labels.length; i++) {
     text(row_labels[i], 20+155, (i+1)*(buttonHeight+marginY));
-  }
+  } 
+  
+  // iterations
+  specimen_name = cp5.get(Textfield.class,"specimen_name").getText();
 }
 
 float degreesToRadians(float degrees) {
@@ -465,6 +484,9 @@ void controlEvent(ControlEvent theEvent) {
     } else if (theEvent.getController().getName().equals("CamControlsNeg_4")) {
       arduinoPort.write("REL 3 -180\n");
     } 
+    else if (theEvent.getController().getName().equals("SaveSettingsControls_0")) {
+      save_log_file();
+    } 
     // Home Specimen Height
     else if (theEvent.getController().getName().equals("HomingControls_0")) {
       arduinoPort.write("HOME 1 0\n");
@@ -538,4 +560,40 @@ void serialEvent(Serial port) {
       }
     }
   }
+}
+
+
+void save_log_file() {
+  String Date = year() + "-" + 
+                    nf(month(), 2) + "-" + 
+                    nf(day(), 2) + "_" + 
+                    nf(hour(), 2) + "-" + 
+                    nf(minute(), 2) + "-" + 
+                    nf(second(), 2);
+  String fileName = Date + ".txt";
+  String[] data; // Array to hold the content
+  // Prepare the data
+  data = new String[13];
+  int r = 0;
+  
+  data[r] = "Date," + Date;
+  r++;
+  data[r] = "Specimen," + specimen_name;
+  r++;
+  for(int i = 0; i < 4; i++){
+    data[r] = "Motor " + i + " position," + motorPositions[i];
+  r++;
+    data[r] = "Motor " + i + " degrees," + motorDegrees[i];
+  r++;
+  }
+  data[r] = "License," + "MIT: (c) 2024 Peter T. Rühr";
+  r++;
+  data[r] = "Script Version," + script_version;
+  r++;
+  data[r] = "Development Version on," + "https://github.com/Peter-T-Ruehr/Photostation_Biocenter";
+
+  // Save to file
+  saveStrings(fileName, data);
+
+  println("File written: " + fileName);
 }

@@ -27,7 +27,7 @@ int motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_heig
 int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
 int motorMicrostepping[4] = {8, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
-int motorIndicesDelays[4] = {125, 500, 500, 500};
+int motorIndicesDelays[4] = {300, 500, 500, 500};
 
 bool homing = false; // variable to enter and leave homing procedure
 
