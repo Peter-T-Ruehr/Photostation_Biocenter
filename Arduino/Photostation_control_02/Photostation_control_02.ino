@@ -27,7 +27,9 @@ int motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_heig
 int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
 int motorMicrostepping[4] = {8, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
+int motorIndicesDelays[4] = {125, 500, 500, 500};
 
+bool homing = false; // variable to enter and leave homing procedure
 
 // Function to convert motor steps to degrees
 float stepsToDegrees(int steps, int stepsPerRevolution) {
@@ -47,7 +49,7 @@ void multiplyArrays(int arr1[], int arr2[], int result[], int size) {
 }
 
 // define soft endstop values
-int motorIndicesSoftendstops_raw[4] = {degreesToSteps(1800,200), degreesToSteps(3600,200), degreesToSteps(90,200), degreesToSteps(1800,200)};
+int motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), degreesToSteps(1800,200)};
 int motorIndicesSoftendstops[4]; // is calculated in setup
 int motorIndicesStepsPerRevolution_raw[4] = {200, 200, 200, 200};
 int motorIndicesstepsPerRevolution[4]; // is calculated in setup
@@ -55,7 +57,7 @@ int motorIndicesstepsPerRevolution[4]; // is calculated in setup
 // // int targetPositions[4] = {0, 0, 0}; // Target positions
 // float stepsPerRevolution = 200;  // Steps per revolution for the motor
 
-int delay_base = 500;
+// int delay_base = 500;
 
 const int bufferSize = 64; // Maximum size of the input buffer
 char inputBuffer[bufferSize]; // Buffer to hold the incoming data
@@ -165,11 +167,14 @@ void turnLedOff() {
 
 void homeMotor(int motorIndex){
   // Move until the endstop is triggered
-  verbose = false;
+  int delay_steps = motorIndicesDelays[motorIndex]; // round(delay_base/(curr_microstepping/2));
+  digitalWrite(motorIndicesDir[motorIndex], LOW);
   while (digitalRead(EndstopPin_arm) == LOW) { // LOW means not triggered
-    moveMotor(motorIndex, degreesToSteps(-1, 200));
+    digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+    digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
   }
-  verbose = true;
   motorPositions[motorIndex] = 0;
   sendMotorPositions();
   sendMotorDegrees();
@@ -179,22 +184,24 @@ void homeMotor(int motorIndex){
 
 void moveMotorTo(int motorIndex, float degrees){
   int curr_motor_position = motorPositions[motorIndex];
-  float curr_motor_degrees = stepsToDegrees(curr_motor_position, 200);
-
+  float curr_motor_degrees = stepsToDegrees(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
   float curr_degrees_difference = degrees - curr_motor_degrees;
   moveMotor(motorIndex, curr_degrees_difference);
 }
 
 void moveMotor(int motorIndex, int degrees) {
   float target = -1;
+  
+  int curr_microstepping = motorMicrostepping[motorIndex];
+
   if(motorIndex == 0){
-    target = degreesToSteps(degrees, 200);
+    target = degreesToSteps(degrees, 200*curr_microstepping);
   } else if(motorIndex == 1){
-    target = degreesToSteps(degrees, 200);
+    target = degreesToSteps(degrees, 200*curr_microstepping);
   } else if(motorIndex == 2){
-    target = degreesToSteps(degrees, 200);
+    target = degreesToSteps(degrees, 200*curr_microstepping);
   } else if (motorIndex == 3){
-    target = degreesToSteps(degrees, 200);
+    target = degreesToSteps(degrees, 200*curr_microstepping);
   } else {
     Serial.print("Motor not defined.");
   }
@@ -212,9 +219,8 @@ void moveMotor(int motorIndex, int degrees) {
     digitalWrite(motorIndicesDir[motorIndex], LOW);
   }
 
-  int curr_microstepping = motorMicrostepping[motorIndex];
-  int target_abs = abs(target) * curr_microstepping;
-  int delay_steps = round(delay_base/curr_microstepping);
+  int target_abs = abs(target); // * curr_microstepping;
+  int delay_steps = motorIndicesDelays[motorIndex]; // round(delay_base/(curr_microstepping/2));
 
   // Serial.println(motorIndex);
   int curr_endstop_pin = motorIndicesEndstop[motorIndex];

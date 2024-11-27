@@ -46,6 +46,7 @@ void setup() {
   image_specimen_height = loadImage("02_specimen_height.png");
   ImageArm = loadImage("03_arm.png");
   ImageMachine = loadImage("00_immovable.png");
+  
   // Add row labels and buttons for each group
   int x = 50;
   int y = 20;  // Initial vertical position for the first row
@@ -140,11 +141,82 @@ void setup() {
     "Save Setting"
   };
   y = addRow("SaveSettingsControls", saveButton, x, y, buttonWidth, buttonHeight, marginX, marginY);
-
-  // Check if the buttons fit inside the window
-  if (y > windowHeight) {
-    println("Warning: Buttons may not fit in the current window size.");
-  }
+  
+  // add buttons around the specimen rotation image
+  // specimen to 180°
+  cp5.addButton("specimen_rot_go_to_180")
+     .setLabel("180°")
+     .setPosition(624, 5)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 225°
+  cp5.addButton("specimen_rot_go_to_225")
+     .setLabel("225°")
+     .setPosition(678, 27)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 270°
+  cp5.addButton("specimen_rot_go_to_270")
+     .setLabel("270°")
+     .setPosition(700, 80)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 315°
+  cp5.addButton("specimen_rot_go_to_315")
+     .setLabel("315°")
+     .setPosition(678, 133)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 0°
+  cp5.addButton("specimen_rot_go_to_0")
+     .setLabel("0°")
+     .setPosition(625, 155)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 45°
+  cp5.addButton("specimen_rot_go_to_45")
+     .setLabel("45°")
+     .setPosition(572, 133)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 90°
+  cp5.addButton("specimen_rot_go_to_90")
+     .setLabel("90°")
+     .setPosition(550, 80)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // specimen to 135°
+  cp5.addButton("specimen_rot_go_to_135")
+     .setLabel("135°")
+     .setPosition(572, 27)
+     .setSize(buttonWidth/3, buttonHeight);
+     
+  // add buttons around the machine schematics 
+  // arm to 90°
+  cp5.addButton("arm_go_to_90")
+     .setLabel("90°")
+     .setPosition(790, 36)
+     .setSize(buttonWidth/3, buttonHeight);
+  // arm to 67.5°
+  cp5.addButton("arm_go_to_67.5")
+     .setLabel("67.5°")
+     .setPosition(883, 55)
+     .setSize(buttonWidth/3, buttonHeight);
+  // arm to 45°
+  cp5.addButton("arm_go_to_45")
+     .setLabel("45°")
+     .setPosition(954, 105)
+     .setSize(buttonWidth/3, buttonHeight);
+  // arm to 22.5°
+  cp5.addButton("arm_go_to_22.5")
+     .setLabel("22.5°")
+     .setPosition(1005, 187)
+     .setSize(buttonWidth/3, buttonHeight);
+  // arm to 0°
+  cp5.addButton("arm_go_to_0")
+     .setLabel("0°")
+     .setPosition(1020, 272)
+     .setSize(buttonWidth/3, buttonHeight);
   
   // Disable some buttons initially
     disableButtons(new String[]{
@@ -153,7 +225,8 @@ void setup() {
       "ArmControlsPos_0", "ArmControlsPos_1", "ArmControlsPos_2", "ArmControlsPos_3", "ArmControlsPos_4",
       "ArmControlsNeg_0", "ArmControlsNeg_1", "ArmControlsNeg_2", "ArmControlsNeg_3", "ArmControlsNeg_4",
       "CamControlsPos_0", "CamControlsPos_1", "CamControlsPos_2", "CamControlsPos_3", "CamControlsPos_4",
-      "CamControlsNeg_0", "CamControlsNeg_1", "CamControlsNeg_2", "CamControlsNeg_3", "CamControlsNeg_4"
+      "CamControlsNeg_0", "CamControlsNeg_1", "CamControlsNeg_2", "CamControlsNeg_3", "CamControlsNeg_4",
+      "arm_go_to_90", "arm_go_to_45", "arm_go_to_0"
     });
 }
 
@@ -196,9 +269,9 @@ void draw() {
   popMatrix(); // Restore the original transformation
   
   
-  // Draw the rotating image at a fixed position
+  // Draw the rotating specimen image at a fixed position
   pushMatrix(); // Save the current transformation
-  translate(25 + 550 + 150 / 2, 5 + 150/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
+  translate(15 + 550 + 150 / 2, 5 + 150/ 2); // Move origin to the image center (imgX + imgWidth / 2, imgY + imgHeight / 2)
   rotate(degreesToRadians(motorDegrees[0])); // Rotate around the image's center
   imageMode(CENTER); // Draw the image from its center
   image(image_specimen_rot, 0, 0, 150, 150); // width, height
@@ -298,6 +371,23 @@ void controlEvent(ControlEvent theEvent) {
     } else if (theEvent.getController().getName().equals("RotControlsSpecimensNeg_5")) {
       arduinoPort.write("REL 0 -360\n");
     }
+    else if (theEvent.getController().getName().equals("specimen_rot_go_to_0")) {
+      arduinoPort.write("ABS 0 0\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_45")) {
+      arduinoPort.write("ABS 0 45\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_90")) {
+      arduinoPort.write("ABS 0 90\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_135")) {
+      arduinoPort.write("ABS 0 135\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_180")) {
+      arduinoPort.write("ABS 0 180\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_225")) {
+      arduinoPort.write("ABS 0 225\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_270")) {
+      arduinoPort.write("ABS 0 270\n");
+    } else if (theEvent.getController().getName().equals("specimen_rot_go_to_315")) {
+      arduinoPort.write("ABS 0 315\n");
+    }
     else if (theEvent.getController().getName().equals("SpecHeightControlsPos_0")) {
       arduinoPort.write("REL 1 1\n");
     } else if (theEvent.getController().getName().equals("SpecHeightControlsPos_1")) {
@@ -342,6 +432,17 @@ void controlEvent(ControlEvent theEvent) {
     } else if (theEvent.getController().getName().equals("ArmControlsNeg_4")) {
       arduinoPort.write("REL 2 -90\n");
     }
+    else if (theEvent.getController().getName().equals("arm_go_to_90")) {
+      arduinoPort.write("ABS 2 90\n");
+    } else if (theEvent.getController().getName().equals("arm_go_to_67.5")) {
+      arduinoPort.write("ABS 2 67.5\n");
+    } else if (theEvent.getController().getName().equals("arm_go_to_45")) {
+      arduinoPort.write("ABS 2 45\n");
+    } else if (theEvent.getController().getName().equals("arm_go_to_22.5")) {
+      arduinoPort.write("ABS 2 22.5\n");
+    } else if (theEvent.getController().getName().equals("arm_go_to_0")) {
+      arduinoPort.write("ABS 2 0\n");
+    }
     else if (theEvent.getController().getName().equals("CamControlsPos_0")) {
       arduinoPort.write("REL 3 1\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_1")) {
@@ -378,7 +479,8 @@ void controlEvent(ControlEvent theEvent) {
       arduinoPort.write("HOME 2 0\n");
       enableButtons(new String[]{
         "ArmControlsPos_0", "ArmControlsPos_1", "ArmControlsPos_2", "ArmControlsPos_3", "ArmControlsPos_4",
-        "ArmControlsNeg_0", "ArmControlsNeg_1", "ArmControlsNeg_2", "ArmControlsNeg_3", "ArmControlsNeg_4"
+        "ArmControlsNeg_0", "ArmControlsNeg_1", "ArmControlsNeg_2", "ArmControlsNeg_3", "ArmControlsNeg_4",
+      "arm_go_to_90", "arm_go_to_45", "arm_go_to_0"
       });
       isArmHomed = true;
     }
