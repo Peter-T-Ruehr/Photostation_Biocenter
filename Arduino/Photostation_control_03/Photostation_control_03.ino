@@ -20,47 +20,60 @@ int EndstopPin_cam = 10;
 */
 
 //                            0                         1                           2                 3
-int motorIndicesDir[4] =      {DirPin_specimen_rot,     DirPin_specimen_height,     DirPin_arm,       DirPin_cam};
-int motorIndicesStep[4] =     {StepPin_specimen_rot,    StepPin_specimen_height,    StepPin_arm,      StepPin_cam};
-int motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_height, EndstopPin_arm,   EndstopPin_cam};
+long motorIndicesDir[4] =      {DirPin_specimen_rot,     DirPin_specimen_height,     DirPin_arm,       DirPin_cam};
+long motorIndicesStep[4] =     {StepPin_specimen_rot,    StepPin_specimen_height,    StepPin_arm,      StepPin_cam};
+long motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_height, EndstopPin_arm,   EndstopPin_cam};
 
-int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
-int motorMicrostepping[4] = {32, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
-int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
-int motorIndicesDelays[4] = {500, 500, 500, 500};
+long motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
+long motorMicrostepping[4] = {32, 1, 1, 10};  // Microstepping (1/x)
+long homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
+long motorIndicesDelays[4] = {300, 500, 500, 300};
 
 bool homing = false; // variable to enter and leave homing procedure
 
-int DelayReadOut = 10*1000;
+// int DelayReadOut = 10*1000;
+
+long mm_per_rev_4 = 4;
 
 // Function to convert motor steps to degrees
-float stepsToDegrees(int steps, int stepsPerRevolution) {
+float stepsToDegrees(long steps, long stepsPerRevolution) {
   return (360.0 / stepsPerRevolution) * steps;
 }
 
 // Function to convert degrees to motor steps
-int degreesToSteps(float degrees, int stepsPerRevolution) {
+long degreesToSteps(long degrees, long stepsPerRevolution) {
   return round((degrees / 360.0) * stepsPerRevolution);
 }
 
+// Function to convert motor steps to mm
+float stepsToMm(long steps, long stepsPerRevolution) {
+  return (mm_per_rev_4 / stepsPerRevolution) * steps;
+}
+
+// Function to convert mm to motor steps
+long mmToSteps(long mm, long stepsPerRevolution) {
+  // 1 rev = 4 mm (mm_per_rev_4)
+  return round((mm * stepsPerRevolution/mm_per_rev_4));
+}
+
 // Function to multiply two arrays
-void multiplyArrays(int arr1[], int arr2[], int result[], int size) {
-  for (int i = 0; i < size; i++) {
+void multiplyArrays(long arr1[], long arr2[], long result[], long size) {
+  for (long i = 0; i < size; i++) {
     result[i] = arr1[i] * arr2[i]; // Multiply corresponding elements
   }
   return result;
 }
 
 // define soft endstop values
-int motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), degreesToSteps(1800,200)};
-int motorIndicesSoftendstops[4]; // is calculated in setup
-int motorIndicesStepsPerRevolution_raw[4] = {200, 200, 200, 200};
-int motorIndicesstepsPerRevolution[4]; // is calculated in setup
+long motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), mmToSteps(1500,200)};
+long motorIndicesSoftendstops[4]; // is calculated in setup
+long motorIndicesStepsPerRevolution_raw[4] = {200, 200, 200, 200};
+long motorIndicesstepsPerRevolution[4]; // is calculated in setup
 
-// // int targetPositions[4] = {0, 0, 0}; // Target positions
+// // long targetPositions[4] = {0, 0, 0}; // Target positions
 // float stepsPerRevolution = 200;  // Steps per revolution for the motor
 
-// int delay_base = 500;
+// long delay_base = 500;
 
 const int bufferSize = 64; // Maximum size of the input buffer
 char inputBuffer[bufferSize]; // Buffer to hold the incoming data
@@ -69,7 +82,7 @@ int bufferIndex = 0; // Index to track the buffer position
 boolean verbose = true; // Global toggle for verbose mode
 
 
-void printArray(int arr[], int size) { // Function must be defined before use
+void printArray(long arr[], int size) { // Function must be defined before use
   for (int i = 0; i < size; i++) {
     Serial.print(arr[i]); // Print element
     if (i < size - 1) Serial.print(", "); // Print comma
@@ -100,9 +113,12 @@ void setup() {
 
   // Multiply the arrays
   multiplyArrays(motorIndicesSoftendstops_raw, motorMicrostepping, motorIndicesSoftendstops, 4);
+  // motorIndicesSoftendstops[3] = 75000;
 
   multiplyArrays(motorIndicesStepsPerRevolution_raw, motorMicrostepping, motorIndicesstepsPerRevolution, 4);
 
+  Serial.println("Steps per revolution: ");
+  printArray(motorIndicesStepsPerRevolution_raw, 4);
   Serial.println("Soft endstops: ");
   printArray(motorIndicesSoftendstops, 4);
 }
@@ -129,7 +145,7 @@ void loop() {
 // Function to process the received command
 void parseAndExecuteCommand(const char* command) {
   char commandString[16]; // To store the command part
-  int number1, number2;   // To store the two numbers
+  long number1, number2;   // To store the two numbers
 
   // Parse the command using sscanf
   if (sscanf(command, "%15s %d %d", commandString, &number1, &number2) == 3) {
@@ -140,10 +156,11 @@ void parseAndExecuteCommand(const char* command) {
 }
 
 // Function to handle the parsed command and number
-void executeCommand(const char* command, int value1, int value2) {
+void executeCommand(const char* command, long value1, long value2) {
     if (strcmp(command, "ABS") == 0) {
       moveMotorTo(value1, value2);
     } else if (strcmp(command, "REL") == 0) {
+      // if(value2 == 3) value1 = -1*value1;
       moveMotor(value1, value2);
     } else if (strcmp(command, "HOME") == 0) {
       homeMotor(value1);
@@ -192,10 +209,16 @@ void homeMotor(int motorIndex){
   sendHomingStates();
 }
 
-void moveMotorTo(int motorIndex, float degrees){
-  int curr_motor_position = motorPositions[motorIndex];
-  float curr_motor_degrees = stepsToDegrees(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
-  float curr_degrees_difference = degrees - curr_motor_degrees;
+void moveMotorTo(int motorIndex, long degrees){
+  long curr_motor_position = motorPositions[motorIndex];
+  long curr_degrees_difference;
+  if(motorIndex == 3){
+    long curr_motor_degrees = stepsToMm(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
+    curr_degrees_difference = degrees - curr_motor_degrees;
+  } else{
+    long curr_motor_degrees = stepsToDegrees(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
+    curr_degrees_difference = degrees - curr_motor_degrees;
+  }
   moveMotor(motorIndex, curr_degrees_difference);
 }
 
@@ -211,7 +234,7 @@ void moveMotor(int motorIndex, int degrees) {
   } else if(motorIndex == 2){
     target = degreesToSteps(degrees, 200*curr_microstepping);
   } else if (motorIndex == 3){
-    target = degreesToSteps(degrees, 200*curr_microstepping);
+    target = mmToSteps(degrees, 200*curr_microstepping);
   } else {
     Serial.print("Motor not defined.");
   }
@@ -261,26 +284,9 @@ void moveMotor(int motorIndex, int degrees) {
   for (int i = 0; i < target_abs; i++) {
     // Check if endstop is reached
     digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
-    // int curr_endstop_read = digitalRead(curr_endstop_pin);
-    // delayMicroseconds(round(delay_steps/2));  // Control speed by delay (adjustable)
-    // delayMicroseconds(DelayReadOut);
-    // if(curr_endstop_read == 0){ // 0 = LOW
-      delayMicroseconds(delay_steps);
-      //if(motorPositions[motorIndex] > curr_endstop_soft){
-        // digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
-        // delayMicroseconds(delay_steps-DelayReadOut);  // Control speed by delay (adjustable)
-        digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
-        delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-        // if(target > 0) {
-        //   // digitalWrite(motorIndicesDir[motorIndex], HIGH);
-        //   motorPositions[motorIndex] = motorPositions[motorIndex]+1;
-        // } else {
-        //   // digitalWrite(motorIndicesDir[motorIndex], LOW);
-        //   motorPositions[motorIndex] = motorPositions[motorIndex]-1;
-        //   //   
-        // }
-      // }
-    //}
+    delayMicroseconds(delay_steps);
+    digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
+    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
   }
 
   if(target > 0){
@@ -290,46 +296,46 @@ void moveMotor(int motorIndex, int degrees) {
   }
   
 
-  // reverse one step in case 0 position was reached
-  if(motorPositions[motorIndex] == 0 - 1){
-    Serial.print("Motor ");
-    Serial.print(motorIndex);
-    Serial.println(" hit position 0.");
-    // reverse motor direction
-    if(target > 0){
-      digitalWrite(motorIndicesDir[motorIndex], LOW);
-      motorPositions[motorIndex] = motorPositions[motorIndex]-1;
-    } else {
-      digitalWrite(motorIndicesDir[motorIndex], HIGH);
-      motorPositions[motorIndex] = motorPositions[motorIndex]+1;
-    }
-    digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
-    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-    digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
-    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-  }
+  // // reverse one step in case 0 position was reached
+  // if(motorPositions[motorIndex] == 0 - 1){
+  //   Serial.print("Motor ");
+  //   Serial.print(motorIndex);
+  //   Serial.println(" hit position 0.");
+  //   // reverse motor direction
+  //   if(target > 0){
+  //     digitalWrite(motorIndicesDir[motorIndex], LOW);
+  //     motorPositions[motorIndex] = motorPositions[motorIndex]-1;
+  //   } else {
+  //     digitalWrite(motorIndicesDir[motorIndex], HIGH);
+  //     motorPositions[motorIndex] = motorPositions[motorIndex]+1;
+  //   }
+  //   digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+  //   delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  //   digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
+  //   delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  // }
 
-  // reverse one step in case soft endstop was reached
-  if(motorPositions[motorIndex] == curr_endstop_soft + 1){
-    Serial.print("Motor ");
-    Serial.print(motorIndex);
-    Serial.print(" hit soft end position of ");
-    Serial.print(curr_endstop_soft);
-    Serial.println(".");
+  // // reverse one step in case soft endstop was reached
+  // if(motorPositions[motorIndex] == curr_endstop_soft + 1){
+  //   Serial.print("Motor ");
+  //   Serial.print(motorIndex);
+  //   Serial.print(" hit soft end position of ");
+  //   Serial.print(curr_endstop_soft);
+  //   Serial.println(".");
     
-    // reverse motor direction
-    if(target > 0){
-      digitalWrite(motorIndicesDir[motorIndex], LOW);
-      motorPositions[motorIndex] = motorPositions[motorIndex]-1;
-    } else {
-      digitalWrite(motorIndicesDir[motorIndex], HIGH);
-      motorPositions[motorIndex] = motorPositions[motorIndex]+1;
-    }
-    digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
-    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-    digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
-    delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-  }
+  //   // reverse motor direction
+  //   if(target > 0){
+  //     digitalWrite(motorIndicesDir[motorIndex], LOW);
+  //     motorPositions[motorIndex] = motorPositions[motorIndex]-1;
+  //   } else {
+  //     digitalWrite(motorIndicesDir[motorIndex], HIGH);
+  //     motorPositions[motorIndex] = motorPositions[motorIndex]+1;
+  //   }
+  //   digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+  //   delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  //   digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
+  //   delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+  // }
 
   if (verbose) {
     sendMotorDegrees();
