@@ -36,7 +36,7 @@ String specimen_name;
 
 void setup() {
   // Set up serial communication with Arduino (adjust COM port as needed)
-  arduinoPort = new Serial(this, "COM4", 115200);  // Use the correct port number
+  arduinoPort = new Serial(this, "COM4", 921600);  // Use the correct port number 115200
   
   size(1125, 600); // Set the window size
   cp5 = new ControlP5(this);

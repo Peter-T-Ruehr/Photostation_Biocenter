@@ -1,10 +1,10 @@
 // Pin assignments for each motor
 int DirPin_specimen_rot = 2;
 int StepPin_specimen_rot = 3;
-int EndstopPin_specimen_rot = 11; // connect to GND
+int EndstopPin_specimen_rot = 11; // connect directly to GND
 int DirPin_specimen_height = 4;
 int StepPin_specimen_height = 5;
-int EndstopPin_specimen_height = 10;
+int EndstopPin_specimen_height = 10; // connect 2nd to GND and use outer contacts (1&2) | LOW means not triggered
 int DirPin_arm = 6;
 int StepPin_arm = 7;
 int EndstopPin_arm = 10;
@@ -25,11 +25,13 @@ int motorIndicesStep[4] =     {StepPin_specimen_rot,    StepPin_specimen_height,
 int motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_height, EndstopPin_arm,   EndstopPin_cam};
 
 int motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
-int motorMicrostepping[4] = {8, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
+int motorMicrostepping[4] = {32, 1, 1, 1};  // Microstepping (1/x) - deprecated but still in use
 int homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
-int motorIndicesDelays[4] = {300, 500, 500, 500};
+int motorIndicesDelays[4] = {500, 500, 500, 500};
 
 bool homing = false; // variable to enter and leave homing procedure
+
+int DelayReadOut = 10*1000;
 
 // Function to convert motor steps to degrees
 float stepsToDegrees(int steps, int stepsPerRevolution) {
@@ -46,6 +48,7 @@ void multiplyArrays(int arr1[], int arr2[], int result[], int size) {
   for (int i = 0; i < size; i++) {
     result[i] = arr1[i] * arr2[i]; // Multiply corresponding elements
   }
+  return result;
 }
 
 // define soft endstop values
@@ -64,6 +67,15 @@ char inputBuffer[bufferSize]; // Buffer to hold the incoming data
 int bufferIndex = 0; // Index to track the buffer position
 
 boolean verbose = true; // Global toggle for verbose mode
+
+
+void printArray(int arr[], int size) { // Function must be defined before use
+  for (int i = 0; i < size; i++) {
+    Serial.print(arr[i]); // Print element
+    if (i < size - 1) Serial.print(", "); // Print comma
+  }
+  Serial.println(); // End line
+}
 
 void setup() {
   Serial.begin(115200);  // Start serial communication
@@ -90,9 +102,10 @@ void setup() {
   multiplyArrays(motorIndicesSoftendstops_raw, motorMicrostepping, motorIndicesSoftendstops, 4);
 
   multiplyArrays(motorIndicesStepsPerRevolution_raw, motorMicrostepping, motorIndicesstepsPerRevolution, 4);
-  
-}
 
+  Serial.println("Soft endstops: ");
+  printArray(motorIndicesSoftendstops, 4);
+}
 
 void loop() {
  // Check if data is available on the serial port
@@ -110,10 +123,7 @@ void loop() {
       Serial.println("Input buffer overflow!");
       bufferIndex = 0; // Reset buffer index to prevent overflow
     }
-  }
-
-  
-    
+  } 
 }
 
 // Function to process the received command
@@ -207,9 +217,10 @@ void moveMotor(int motorIndex, int degrees) {
   }
   
   if (verbose) {
-    Serial.print("target: ");
+    Serial.println("********");
+    Serial.print("movement steps: ");
     Serial.println(target);
-    Serial.print("degrees: ");
+    Serial.print("movement degrees: ");
     Serial.println(degrees);
   }
   
@@ -222,31 +233,62 @@ void moveMotor(int motorIndex, int degrees) {
   int target_abs = abs(target); // * curr_microstepping;
   int delay_steps = motorIndicesDelays[motorIndex]; // round(delay_base/(curr_microstepping/2));
 
-  // Serial.println(motorIndex);
+  
   int curr_endstop_pin = motorIndicesEndstop[motorIndex];
   // Serial.println(curr_endstop_pin);
   int curr_endstop_soft = motorIndicesSoftendstops[motorIndex];
+
+  // check if soft endstops would be reached
+  // Serial.println(motorPositions[motorIndex] + target);
+  // Serial.println("****");
+  if(motorPositions[motorIndex] + target < curr_endstop_soft){
+    if(motorPositions[motorIndex] + target > 0) {
+      
+    } else{
+      Serial.println("HARD END!!");
+      target_abs = motorPositions[motorIndex];
+      Serial.print("new movement steps: ");
+      Serial.println(target_abs);
+    }
+    
+  } else {
+    Serial.println("SOFT END!!");
+    target_abs = curr_endstop_soft-motorPositions[motorIndex];
+    Serial.print("new movement steps: ");
+    Serial.println(target_abs);
+  }
+
   for (int i = 0; i < target_abs; i++) {
     // Check if endstop is reached
-    if(digitalRead(curr_endstop_pin) == LOW && 
-          motorPositions[motorIndex] < curr_endstop_soft + 1 &&
-          motorPositions[motorIndex] > 0 - 1){
+    digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+    // int curr_endstop_read = digitalRead(curr_endstop_pin);
+    // delayMicroseconds(round(delay_steps/2));  // Control speed by delay (adjustable)
+    // delayMicroseconds(DelayReadOut);
+    // if(curr_endstop_read == 0){ // 0 = LOW
+      delayMicroseconds(delay_steps);
       //if(motorPositions[motorIndex] > curr_endstop_soft){
-        digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
-        delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
+        // digitalWrite(motorIndicesStep[motorIndex], HIGH);  // Step pin HIGH
+        // delayMicroseconds(delay_steps-DelayReadOut);  // Control speed by delay (adjustable)
         digitalWrite(motorIndicesStep[motorIndex], LOW);   // Step pin LOW
         delayMicroseconds(delay_steps);  // Control speed by delay (adjustable)
-        if(target > 0) {
-          digitalWrite(motorIndicesDir[motorIndex], HIGH);
-          motorPositions[motorIndex] = motorPositions[motorIndex]+1;
-        } else {
-          digitalWrite(motorIndicesDir[motorIndex], LOW);
-          motorPositions[motorIndex] = motorPositions[motorIndex]-1;
-          //   
-        }
-      }
+        // if(target > 0) {
+        //   // digitalWrite(motorIndicesDir[motorIndex], HIGH);
+        //   motorPositions[motorIndex] = motorPositions[motorIndex]+1;
+        // } else {
+        //   // digitalWrite(motorIndicesDir[motorIndex], LOW);
+        //   motorPositions[motorIndex] = motorPositions[motorIndex]-1;
+        //   //   
+        // }
+      // }
     //}
   }
+
+  if(target > 0){
+    motorPositions[motorIndex] = motorPositions[motorIndex]+target_abs;
+  } else {
+    motorPositions[motorIndex] = motorPositions[motorIndex]-target_abs;
+  }
+  
 
   // reverse one step in case 0 position was reached
   if(motorPositions[motorIndex] == 0 - 1){
