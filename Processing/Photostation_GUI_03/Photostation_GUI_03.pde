@@ -15,7 +15,7 @@ Serial arduinoPort;
 int[] motorPositions = {0, 0, 0, 0};  // Current positions of the motors
 float[] motorDegrees =  {0, 0, 0, 0};  // Current degree positions of the motors
 int[] homingStates = {1, 0, 0, 0};  // Current Homing states of the motors
-int[] targetPositions = {0, 0, 0, 0}; // Slider values (target positions)
+// int[] targetPositions = {0, 0, 0, 0}; // Slider values (target positions)
 int[] MaxmotorPositions = {360, 90, 3600, 1800};
 
 int motors_to_control = 4;
@@ -363,6 +363,7 @@ int addRow(String label, String[] labels, int x, int y, int width, int height, i
 void controlEvent(ControlEvent theEvent) {
   if (theEvent.isController()) {
     String name = theEvent.getController().getName();
+    println("**************************************");
     println("Button " + name + " clicked!");
     if (theEvent.getController().getName().equals("RotControlsSpecimensPos_0")) {
       arduinoPort.write("REL 0 1\n");
@@ -522,43 +523,49 @@ void controlEvent(ControlEvent theEvent) {
   }
 }
 
-// Send target positions to Arduino
-void sendTargetPositions() {
-  arduinoPort.write('s');  // Signal start of positions
-  for (int i = 0; i < motors_to_control; i++) {
-    arduinoPort.write(str(targetPositions[i]) + ',');  // Send each position
-  }
-  arduinoPort.write('\n');  // End of transmission
-}
+//// Send target positions to Arduino
+//void sendTargetPositions() {
+//  arduinoPort.write('s');  // Signal start of positions
+//  for (int i = 0; i < motors_to_control; i++) {
+//    arduinoPort.write(str(targetPositions[i]) + ',');  // Send each position
+//  }
+//  arduinoPort.write('\n');  // End of transmission
+//}
 
 // Function to handle incoming serial data
 void serialEvent(Serial port) {
   String received = port.readStringUntil('\n'); // Read the incoming data
   if (received != null) {
     received = trim(received); // Remove any leading/trailing whitespace
-    println("A: " + received); // Print the received data to the console
+    // println("**************");
+    // println("A: " + received); // Print the received data to the console
     
     if(received.startsWith("0")){
-      println("Updating motor positions...");
+      println("Updating motor positions:");
       String[] positions = split(trim(received), ',');
       for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
         motorPositions[i-1] = int(positions[i]);
       }
-    } 
-    else if (received.startsWith("1")) {
-      println("Updating homing states...");
+      println("A: " + received); // Print the received data to the console
+      println("**************");
+    } else if (received.startsWith("1")) {
+      println("Updating homing states:");
       String[] positions = split(trim(received), ',');
       for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
         homingStates[i-1] = int(positions[i]);
       }
-    } 
-    else if (received.startsWith("2")) {
-      println("Updating motor degrees...");
+      println("A: " + received); // Print the received data to the console
+      println("**************");
+    } else if (received.startsWith("2")) {
+      println("Updating motor degrees:");
       String[] positions = split(trim(received), ',');
       for (int i = 1; i < positions.length; i++) { // start at 1, not 0, to skip identifier
         motorDegrees[i-1] = int(positions[i]);
       }
+      println("A: " + received); // Print the received data to the console
+      println("**************");
     }
+    // println("****************************");
   }
 }
 
