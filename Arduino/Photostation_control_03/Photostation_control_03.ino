@@ -65,7 +65,7 @@ void multiplyArrays(long arr1[], long arr2[], long result[], long size) {
 }
 
 // define soft endstop values
-long motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), mmToSteps(1500,200)};
+long motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), mmToSteps(150,200)};
 long motorIndicesSoftendstops[4]; // is calculated in setup
 long motorIndicesStepsPerRevolution_raw[4] = {200, 200, 200, 200};
 long motorIndicesstepsPerRevolution[4]; // is calculated in setup
@@ -113,7 +113,7 @@ void setup() {
 
   // Multiply the arrays
   multiplyArrays(motorIndicesSoftendstops_raw, motorMicrostepping, motorIndicesSoftendstops, 4);
-  // motorIndicesSoftendstops[3] = 75000;
+  motorIndicesSoftendstops[3] = 50000;
 
   multiplyArrays(motorIndicesStepsPerRevolution_raw, motorMicrostepping, motorIndicesstepsPerRevolution, 4);
 
@@ -223,7 +223,7 @@ void moveMotorTo(int motorIndex, long degrees){
 }
 
 void moveMotor(int motorIndex, int degrees) {
-  float target = -1;
+  long target = -1;
   
   int curr_microstepping = motorMicrostepping[motorIndex];
 
@@ -253,13 +253,13 @@ void moveMotor(int motorIndex, int degrees) {
     digitalWrite(motorIndicesDir[motorIndex], LOW);
   }
 
-  int target_abs = abs(target); // * curr_microstepping;
+  long target_abs = abs(target); // * curr_microstepping;
   int delay_steps = motorIndicesDelays[motorIndex]; // round(delay_base/(curr_microstepping/2));
 
   
   int curr_endstop_pin = motorIndicesEndstop[motorIndex];
   // Serial.println(curr_endstop_pin);
-  int curr_endstop_soft = motorIndicesSoftendstops[motorIndex];
+  long curr_endstop_soft = motorIndicesSoftendstops[motorIndex];
 
   // check if soft endstops would be reached
   // Serial.println(motorPositions[motorIndex] + target);
@@ -275,7 +275,8 @@ void moveMotor(int motorIndex, int degrees) {
     }
     
   } else {
-    Serial.println("SOFT END!!");
+    Serial.print("Soft end reached: ");
+    Serial.println(curr_endstop_soft);
     target_abs = curr_endstop_soft-motorPositions[motorIndex];
     Serial.print("new movement steps: ");
     Serial.println(target_abs);

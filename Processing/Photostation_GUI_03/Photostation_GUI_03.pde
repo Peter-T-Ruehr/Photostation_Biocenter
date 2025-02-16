@@ -36,7 +36,7 @@ String specimen_name;
 
 void setup() {
   // Set up serial communication with Arduino (adjust COM port as needed)
-  arduinoPort = new Serial(this, "COM4", 921600);  // Use the correct port number 115200
+  arduinoPort = new Serial(this, "COM4", 115200);  // Use the correct port number 115200
   
   size(1125, 600); // Set the window size
   cp5 = new ControlP5(this);
@@ -464,26 +464,26 @@ void controlEvent(ControlEvent theEvent) {
       arduinoPort.write("ABS 2 0\n");
     }
     else if (theEvent.getController().getName().equals("CamControlsPos_0")) {
-      arduinoPort.write("REL 3 1\n");
+      arduinoPort.write("REL 3 -1\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_1")) {
-      arduinoPort.write("REL 3 5\n");
+      arduinoPort.write("REL 3 -5\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_2")) {
-      arduinoPort.write("REL 3 45\n");
+      arduinoPort.write("REL 3 -10\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_3")) {
-      arduinoPort.write("REL 3 90\n");
+      arduinoPort.write("REL 3 -50\n");
     } else if (theEvent.getController().getName().equals("CamControlsPos_4")) {
-      arduinoPort.write("REL 3 180\n");
+      arduinoPort.write("REL 3 -100\n");
     }
     else if (theEvent.getController().getName().equals("CamControlsNeg_0")) {
-      arduinoPort.write("REL 3 -1\n");
+      arduinoPort.write("REL 3 1\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_1")) {
-      arduinoPort.write("REL 3 -5\n");
+      arduinoPort.write("REL 3 5\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_2")) {
-      arduinoPort.write("REL 3 -45\n");
+      arduinoPort.write("REL 3 10\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_3")) {
-      arduinoPort.write("REL 3 -90\n");
+      arduinoPort.write("REL 3 50\n");
     } else if (theEvent.getController().getName().equals("CamControlsNeg_4")) {
-      arduinoPort.write("REL 3 -180\n");
+      arduinoPort.write("REL 3 100\n");
     } 
     else if (theEvent.getController().getName().equals("SaveSettingsControls_0")) {
       save_log_file();
