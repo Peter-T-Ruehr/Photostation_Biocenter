@@ -25,24 +25,36 @@ long motorIndicesStep[4] =     {StepPin_specimen_rot,    StepPin_specimen_height
 long motorIndicesEndstop[4] =  {EndstopPin_specimen_rot, EndstopPin_specimen_height, EndstopPin_arm,   EndstopPin_cam};
 
 long motorPositions[4] = {0, 0, 0, 0};  // Current motor positions (steps)
-long motorMicrostepping[4] = {32, 1, 1, 10};  // Microstepping (1/x)
+long motorMicrostepping[4] = {32, 8, 8, 2};  // Microstepping (1/x)
 long homingStates[4] = {1, 0, 0, 0};  // Current homing states (0 = not homed; 1 = homed)
-long motorIndicesDelays[4] = {100, 500, 500, 300};
+long motorIndicesDelays[4] = {100, 500, 1500, 300};
 
 bool homing = false; // variable to enter and leave homing procedure
 
 // int DelayReadOut = 10*1000;
 
-long mm_per_rev_4 = 4;
+double mm_per_rev_4 = 4;
+double steps_per_deg = 24;
 
 // Function to convert motor steps to degrees
 float stepsToDegrees(long steps, long stepsPerRevolution) {
   return (360.0 / stepsPerRevolution) * steps;
 }
 
+// Function to convert motor steps to degrees for arm
+double stepsToDegreesArm(long steps, long stepsPerRevolution) {
+  return 360 * steps / (stepsPerRevolution*steps_per_deg);
+  // return round(360 * steps / (200*24) / 8);
+}
+
 // Function to convert degrees to motor steps
 long degreesToSteps(long degrees, long stepsPerRevolution) {
   return round((degrees / 360.0) * stepsPerRevolution);
+}
+
+// Function to convert degrees to motor steps for the arm
+long DegreesToStepsArm(long degrees, long stepsPerRevolution) {
+  return round((degrees / 360.0) * (stepsPerRevolution*steps_per_deg));
 }
 
 // Function to convert motor steps to mm
@@ -53,7 +65,7 @@ float stepsToMm(long steps, long stepsPerRevolution) {
 // Function to convert mm to motor steps
 long mmToSteps(long mm, long stepsPerRevolution) {
   // 1 rev = 4 mm (mm_per_rev_4)
-  return round((mm * stepsPerRevolution/mm_per_rev_4));
+  return round(mm * (stepsPerRevolution/mm_per_rev_4));
 }
 
 // Function to multiply two arrays
@@ -65,7 +77,7 @@ void multiplyArrays(long arr1[], long arr2[], long result[], long size) {
 }
 
 // define soft endstop values
-long motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), degreesToSteps(3600,200), degreesToSteps(90,200), mmToSteps(150,200)};
+long motorIndicesSoftendstops_raw[4] = {degreesToSteps(360,200), mmToSteps(50,200), DegreesToStepsArm(900000000,200), mmToSteps(150,200)};
 long motorIndicesSoftendstops[4]; // is calculated in setup
 long motorIndicesStepsPerRevolution_raw[4] = {200, 200, 200, 200};
 long motorIndicesstepsPerRevolution[4]; // is calculated in setup
@@ -113,7 +125,7 @@ void setup() {
 
   // Multiply the arrays
   multiplyArrays(motorIndicesSoftendstops_raw, motorMicrostepping, motorIndicesSoftendstops, 4);
-  motorIndicesSoftendstops[3] = 50000;
+  motorIndicesSoftendstops[2] = 9600;
 
   multiplyArrays(motorIndicesStepsPerRevolution_raw, motorMicrostepping, motorIndicesstepsPerRevolution, 4);
 
@@ -212,10 +224,13 @@ void homeMotor(int motorIndex){
 void moveMotorTo(int motorIndex, long degrees){
   long curr_motor_position = motorPositions[motorIndex];
   long curr_degrees_difference;
-  if(motorIndex == 3){
+  if(motorIndex == 2){
+    long curr_motor_degrees = stepsToDegreesArm(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
+    curr_degrees_difference = degrees - curr_motor_degrees;
+  } else if(motorIndex == 3){
     long curr_motor_degrees = stepsToMm(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
     curr_degrees_difference = degrees - curr_motor_degrees;
-  } else{
+  } else {
     long curr_motor_degrees = stepsToDegrees(curr_motor_position, motorIndicesstepsPerRevolution[motorIndex]);
     curr_degrees_difference = degrees - curr_motor_degrees;
   }
@@ -230,9 +245,9 @@ void moveMotor(int motorIndex, int degrees) {
   if(motorIndex == 0){
     target = degreesToSteps(degrees, 200*curr_microstepping);
   } else if(motorIndex == 1){
-    target = degreesToSteps(degrees, 200*curr_microstepping);
+    target = mmToSteps(degrees, 200*curr_microstepping);
   } else if(motorIndex == 2){
-    target = degreesToSteps(degrees, 200*curr_microstepping);
+    target = DegreesToStepsArm(degrees, 200*curr_microstepping);
   } else if (motorIndex == 3){
     target = mmToSteps(degrees, 200*curr_microstepping);
   } else {
@@ -268,7 +283,7 @@ void moveMotor(int motorIndex, int degrees) {
     if(motorPositions[motorIndex] + target > 0) {
       
     } else{
-      Serial.println("HARD END!!");
+      Serial.println("Hard end reached.");
       target_abs = motorPositions[motorIndex];
       Serial.print("new movement steps: ");
       Serial.println(target_abs);
@@ -365,7 +380,7 @@ void sendMotorDegrees() {
   Serial.print(',');
   Serial.print(stepsToDegrees(motorPositions[1],motorIndicesstepsPerRevolution[1]));
   Serial.print(',');
-  Serial.print(stepsToDegrees(motorPositions[2],motorIndicesstepsPerRevolution[2]));
+  Serial.print(stepsToDegreesArm(motorPositions[2],motorIndicesstepsPerRevolution[2]));
   Serial.print(',');
   Serial.println(stepsToDegrees(motorPositions[3],motorIndicesstepsPerRevolution[3]));
 }
